@@ -45,7 +45,13 @@ pip3 install google-auth google-auth-oauthlib google-api-python-client
 4. Download JSON → rename to `credentials.json`
 5. Place in same folder as the scripts
 
-**3. Add yourself as a test user**
+**3. (Optional) Override paths via environment variables**
+```bash
+export GMAIL_CREDENTIALS_PATH=/path/to/credentials.json
+export GMAIL_TOKEN_PATH=/path/to/token.pickle
+```
+
+**4. Add yourself as a test user**
 - APIs & Services → OAuth consent screen → Test users → Add your Gmail
 
 ---
@@ -134,9 +140,10 @@ python -m pytest tests/ -v --tb=short
 ```
 
 **Test coverage:**
-- `tests/test_auth.py` — `with_retry()` exponential backoff (6 tests)
+- `tests/test_auth.py` — `with_retry()` backoff + `get_gmail_service` credential handling (8 tests)
 - `tests/test_labeler.py` — label lookup/creation and thread pagination (5 tests)
 - `tests/test_delete.py` — label ID lookup and batch trash operations (5 tests)
+- `tests/test_label_interviews.py` — interview label creation and thread labeling (4 tests)
 
 ---
 

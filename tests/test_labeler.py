@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
 from gmail_labeler import get_or_create_label, label_threads
@@ -9,6 +8,7 @@ def test_get_or_create_label_finds_existing(mock_service):
         {'name': 'Job Rejections', 'id': 'label_abc'},
         {'name': 'Other', 'id': 'other_id'},
     ]
+    mock_service.users.return_value.labels.return_value.create.reset_mock()
     label_id = get_or_create_label(mock_service, 'Job Rejections', existing)
     assert label_id == 'label_abc'
     mock_service.users.return_value.labels.return_value.create.assert_not_called()

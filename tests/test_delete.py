@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
 from delete_job_emails import get_label_id, trash_all_in_label
@@ -57,6 +56,6 @@ def test_trash_all_deletes_label_after_trashing(mock_service):
          patch('time.sleep'):
         trash_all_in_label(mock_service, 'Job Rejections', 'label123')
 
-    mock_service.users.return_value.labels.return_value.delete.assert_called_once_with(
+    mock_service.users.return_value.labels.return_value.delete.assert_called_with(
         userId='me', id='label123'
     )

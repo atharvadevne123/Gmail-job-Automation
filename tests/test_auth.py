@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 from googleapiclient.errors import HttpError
 
 from auth import with_retry
@@ -57,3 +57,28 @@ def test_with_retry_retries_on_500():
     with patch("time.sleep"):
         result = with_retry(fn, max_retries=2)
     assert result == "done"
+
+
+# --- get_gmail_service tests ---
+
+def test_get_gmail_service_raises_when_credentials_missing(tmp_path):
+    from auth import get_gmail_service
+    with patch('auth.TOKEN_PATH', str(tmp_path / 'token.pickle')), \
+         patch('auth.CREDENTIALS_PATH', str(tmp_path / 'credentials.json')):
+        with pytest.raises(FileNotFoundError, match='credentials.json not found'):
+            get_gmail_service()
+
+
+def test_get_gmail_service_loads_valid_token(tmp_path):
+    from auth import get_gmail_service
+    creds = MagicMock()
+    creds.valid = True
+
+    with patch('auth.TOKEN_PATH', str(tmp_path / 'token.pickle')), \
+         patch('auth.os.path.exists', return_value=True), \
+         patch('builtins.open', mock_open()), \
+         patch('auth.pickle.load', return_value=creds), \
+         patch('auth.build') as mock_build:
+        mock_build.return_value = MagicMock()
+        get_gmail_service()
+        assert mock_build.called
