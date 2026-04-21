@@ -8,8 +8,13 @@
 #  3. Run: python gmail_labeler.py
 # ============================================================
 
+import logging
 import time
+from typing import Any
+
 from auth import get_gmail_service, with_retry
+
+logger = logging.getLogger(__name__)
 
 LABELS = {
     "Job Applications Applied": [
@@ -82,24 +87,24 @@ LABELS = {
 BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
-def get_or_create_label(service, name, existing_labels):
+def get_or_create_label(service: Any, name: str, existing_labels: list) -> str:
     for label in existing_labels:
         if label['name'] == name:
-            print(f"  ✓ Found existing label: '{name}'")
+            logger.info("  ✓ Found existing label: '%s'", name)
             return label['id']
 
     label = with_retry(lambda: service.users().labels().create(
         userId='me',
         body={'name': name, 'labelListVisibility': 'labelShow', 'messageListVisibility': 'show'}
     ).execute())
-    print(f"  ✓ Created new label: '{name}'")
+    logger.info("  ✓ Created new label: '%s'", name)
     return label['id']
 
 
-def label_threads(service, label_name, label_id, queries):
+def label_threads(service: Any, label_name: str, label_id: str, queries: list) -> int:
     query = ' OR '.join(queries)
-    print(f"\n🔍 Searching for: '{label_name}'")
-    print(f"   Query has {len(queries)} keyword patterns\n")
+    logger.info("\n🔍 Searching for: '%s'", label_name)
+    logger.info("   Query has %d keyword patterns\n", len(queries))
 
     page_token = None
     page = 0
@@ -117,7 +122,7 @@ def label_threads(service, label_name, label_id, queries):
         if not threads:
             break
 
-        print(f"  Page {page}: found {len(threads)} threads — labeling & archiving...")
+        logger.info("  Page %d: found %d threads — labeling & archiving...", page, len(threads))
 
         thread_ids = [t['id'] for t in threads]
         for i in range(0, len(thread_ids), BATCH_SIZE):
@@ -139,8 +144,8 @@ def label_threads(service, label_name, label_id, queries):
 
             total += len(chunk) - len(errors)
             if errors:
-                print(f"    ⚠️  {len(errors)} threads failed in this batch")
-            print(f"    ✓ {total} total labeled & moved out of inbox so far...")
+                logger.warning("    ⚠️  %d threads failed in this batch", len(errors))
+            logger.info("    ✓ %d total labeled & moved out of inbox so far...", total)
             time.sleep(0.2)
 
         page_token = response.get('nextPageToken')
@@ -149,18 +154,19 @@ def label_threads(service, label_name, label_id, queries):
 
         time.sleep(0.3)
 
-    print(f"\n  ✅ '{label_name}' — DONE! Total: {total} emails labeled.\n")
+    logger.info("\n  ✅ '%s' — DONE! Total: %d emails labeled.\n", label_name, total)
     return total
 
 
-def main():
-    print("=" * 60)
-    print("  Gmail Job Labeler — No Time Limits!")
-    print("=" * 60)
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    logger.info("=" * 60)
+    logger.info("  Gmail Job Labeler — No Time Limits!")
+    logger.info("=" * 60)
 
-    print("\n🔐 Authenticating with Gmail...")
+    logger.info("\n🔐 Authenticating with Gmail...")
     service = get_gmail_service()
-    print("  ✓ Authenticated!\n")
+    logger.info("  ✓ Authenticated!\n")
 
     existing_labels = with_retry(
         lambda: service.users().labels().list(userId='me').execute()
@@ -172,9 +178,9 @@ def main():
         count = label_threads(service, label_name, label_id, queries)
         grand_total += count
 
-    print("=" * 60)
-    print(f"  🎉 ALL DONE! Grand total: {grand_total} emails labeled.")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("  🎉 ALL DONE! Grand total: %d emails labeled.", grand_total)
+    logger.info("=" * 60)
 
 
 if __name__ == '__main__':
