@@ -1,107 +1,93 @@
 # ============================================================
-#  Gmail Job Emails DELETER
-#  Permanently deletes all emails under:
+#  Gmail Job Emails — Move to Trash
+#  Moves all emails under:
 #  - "Job Rejections"
 #  - "Job Applications Applied"
-#  ⚠️ THIS CANNOT BE UNDONE
+#  to Trash. Recoverable for 30 days via Gmail → Trash.
+#  To permanently delete immediately: Gmail → Trash → Empty Trash
 # ============================================================
 
-import os
 import time
-import pickle
-from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-import webbrowser
+from auth import get_gmail_service, with_retry
 
-webbrowser.register('safari', None, webbrowser.BackgroundBrowser('/Applications/Safari.app'))
-
-SCOPES = ['https://mail.google.com/']
-
-LABELS_TO_DELETE = [
+LABELS_TO_TRASH = [
     "Job Rejections",
     "Job Applications Applied"
 ]
 
-def get_gmail_service():
-    creds = None
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as f:
-            creds = pickle.load(f)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0, browser='safari')
-        with open('token.pickle', 'wb') as f:
-            pickle.dump(creds, f)
-    return build('gmail', 'v1', credentials=creds)
+BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
 def get_label_id(service, name):
-    results = service.users().labels().list(userId='me').execute()
+    results = with_retry(lambda: service.users().labels().list(userId='me').execute())
     for label in results.get('labels', []):
         if label['name'] == name:
             return label['id']
     return None
 
 
-def delete_all_in_label(service, label_name, label_id):
-    print(f"\n🗑️  Deleting all emails in '{label_name}'...")
+def trash_all_in_label(service, label_name, label_id):
+    print(f"\n🗑️  Moving all emails in '{label_name}' to Trash...")
     page_token = None
     page = 0
     total = 0
 
     while True:
         page += 1
-        params = {
-            'userId': 'me',
-            'labelIds': [label_id],
-            'maxResults': 500
-        }
+        params = {'userId': 'me', 'labelIds': [label_id], 'maxResults': 500}
         if page_token:
             params['pageToken'] = page_token
 
-        response = service.users().threads().list(**params).execute()
+        response = with_retry(lambda p=params: service.users().threads().list(**p).execute())
         threads = response.get('threads', [])
 
         if not threads:
             break
 
-        print(f"  Page {page}: deleting {len(threads)} threads...")
+        print(f"  Page {page}: trashing {len(threads)} threads...")
 
-        for thread in threads:
-            service.users().threads().delete(
-                userId='me',
-                id=thread['id']
-            ).execute()
-            total += 1
+        thread_ids = [t['id'] for t in threads]
+        for i in range(0, len(thread_ids), BATCH_SIZE):
+            chunk = thread_ids[i:i + BATCH_SIZE]
+            errors = []
+
+            def _cb(req_id, response, exception):
+                if exception:
+                    errors.append(exception)
+
+            batch = service.new_batch_http_request(callback=_cb)
+            for tid in chunk:
+                batch.add(service.users().threads().trash(userId='me', id=tid))
+            with_retry(batch.execute)
+
+            total += len(chunk) - len(errors)
+            if errors:
+                print(f"    ⚠️  {len(errors)} threads failed in this batch")
             if total % 50 == 0:
-                print(f"    🗑️  {total} deleted so far...")
+                print(f"    🗑️  {total} moved to Trash so far...")
             time.sleep(0.1)
 
         page_token = response.get('nextPageToken')
         if not page_token:
             break
 
-    # Delete the label itself
-    service.users().labels().delete(userId='me', id=label_id).execute()
-    print(f"  ✅ '{label_name}' — {total} emails deleted + label removed!\n")
+    with_retry(lambda: service.users().labels().delete(userId='me', id=label_id).execute())
+    print(f"  ✅ '{label_name}' — {total} emails moved to Trash + label removed!\n")
     return total
 
 
 def main():
     print("=" * 60)
-    print("  ⚠️  Gmail Job Emails DELETER")
-    print("  This will permanently delete all emails in:")
-    for l in LABELS_TO_DELETE:
-        print(f"    - {l}")
+    print("  🗑️  Gmail Job Emails — Move to Trash")
+    print("  The following labels will be emptied and removed:")
+    for label in LABELS_TO_TRASH:
+        print(f"    - {label}")
+    print("  Emails are recoverable for 30 days from Gmail → Trash.")
     print("=" * 60)
 
-    confirm = input("\n  Type YES to confirm permanent deletion: ")
+    confirm = input("\n  Type YES to confirm: ")
     if confirm.strip() != "YES":
-        print("  Cancelled. Nothing was deleted.")
+        print("  Cancelled. Nothing was changed.")
         return
 
     print("\n🔐 Authenticating...")
@@ -109,18 +95,17 @@ def main():
     print("  ✓ Authenticated!\n")
 
     grand_total = 0
-    for label_name in LABELS_TO_DELETE:
+    for label_name in LABELS_TO_TRASH:
         label_id = get_label_id(service, label_name)
         if not label_id:
             print(f"  ⚠️  Label '{label_name}' not found — skipping.")
             continue
-        count = delete_all_in_label(service, label_name, label_id)
+        count = trash_all_in_label(service, label_name, label_id)
         grand_total += count
 
     print("=" * 60)
-    print(f"  🎉 ALL DONE! {grand_total} emails permanently deleted.")
-    print("  They will be permanently deleted after 30 days.")
-    print("  To delete immediately: go to Gmail → Trash → Empty Trash")
+    print(f"  🎉 ALL DONE! {grand_total} emails moved to Trash.")
+    print("  To permanently delete: Gmail → Trash → Empty Trash")
     print("=" * 60)
 
 

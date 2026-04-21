@@ -3,27 +3,14 @@
 #  Labels ALL rejection + application emails in one go
 #
 #  SETUP (one time):
-#  1. pip install google-auth google-auth-oauthlib google-api-python-client
+#  1. pip install -r requirements.txt
 #  2. Get credentials.json from Google Cloud Console (see README below)
 #  3. Run: python gmail_labeler.py
 # ============================================================
 
-import os
 import time
-import pickle
-import webbrowser
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+from auth import get_gmail_service, with_retry
 
-# Force Safari as the browser
-webbrowser.register('safari', None, webbrowser.BackgroundBrowser('/Applications/Safari.app'))
-
-# ── SCOPES ──────────────────────────────────────────────────
-SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
-
-# ── LABELS TO CREATE ────────────────────────────────────────
 LABELS = {
     "Job Applications Applied": [
         'subject:"thank you for applying"',
@@ -92,47 +79,23 @@ LABELS = {
     ]
 }
 
-# ── AUTH ─────────────────────────────────────────────────────
-def get_gmail_service():
-    creds = None
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as f:
-            creds = pickle.load(f)
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not os.path.exists('credentials.json'):
-                print("\n❌ ERROR: credentials.json not found!")
-                print("   Follow the setup steps in the README at the bottom of this file.\n")
-                exit(1)
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0, browser="safari")
-        with open('token.pickle', 'wb') as f:
-            pickle.dump(creds, f)
-
-    return build('gmail', 'v1', credentials=creds)
+BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
-# ── GET OR CREATE LABEL ───────────────────────────────────────
-def get_or_create_label(service, name):
-    results = service.users().labels().list(userId='me').execute()
-    for label in results.get('labels', []):
+def get_or_create_label(service, name, existing_labels):
+    for label in existing_labels:
         if label['name'] == name:
             print(f"  ✓ Found existing label: '{name}'")
             return label['id']
 
-    label = service.users().labels().create(userId='me', body={
-        'name': name,
-        'labelListVisibility': 'labelShow',
-        'messageListVisibility': 'show'
-    }).execute()
+    label = with_retry(lambda: service.users().labels().create(
+        userId='me',
+        body={'name': name, 'labelListVisibility': 'labelShow', 'messageListVisibility': 'show'}
+    ).execute())
     print(f"  ✓ Created new label: '{name}'")
     return label['id']
 
 
-# ── SEARCH + LABEL ALL MATCHING THREADS ──────────────────────
 def label_threads(service, label_name, label_id, queries):
     query = ' OR '.join(queries)
     print(f"\n🔍 Searching for: '{label_name}'")
@@ -144,15 +107,11 @@ def label_threads(service, label_name, label_id, queries):
 
     while True:
         page += 1
-        params = {
-            'userId': 'me',
-            'q': query,
-            'maxResults': 500,
-        }
+        params = {'userId': 'me', 'q': query, 'maxResults': 500}
         if page_token:
             params['pageToken'] = page_token
 
-        response = service.users().threads().list(**params).execute()
+        response = with_retry(lambda p=params: service.users().threads().list(**p).execute())
         threads = response.get('threads', [])
 
         if not threads:
@@ -160,23 +119,29 @@ def label_threads(service, label_name, label_id, queries):
 
         print(f"  Page {page}: found {len(threads)} threads — labeling & archiving...")
 
-        # Batch modify in chunks of 1000 (Gmail API limit)
-        chunk_size = 1000
-        for i in range(0, len(threads), chunk_size):
-            chunk = threads[i:i + chunk_size]
-            ids = [t['id'] for t in chunk]
-            for thread_id in ids:
-                service.users().threads().modify(
+        thread_ids = [t['id'] for t in threads]
+        for i in range(0, len(thread_ids), BATCH_SIZE):
+            chunk = thread_ids[i:i + BATCH_SIZE]
+            errors = []
+
+            def _cb(req_id, response, exception):
+                if exception:
+                    errors.append(exception)
+
+            batch = service.new_batch_http_request(callback=_cb)
+            for tid in chunk:
+                batch.add(service.users().threads().modify(
                     userId='me',
-                    id=thread_id,
-                    body={
-                        'addLabelIds': [label_id],
-                        'removeLabelIds': ['INBOX']
-                    }
-                ).execute()
-            total += len(ids)
+                    id=tid,
+                    body={'addLabelIds': [label_id], 'removeLabelIds': ['INBOX']}
+                ))
+            with_retry(batch.execute)
+
+            total += len(chunk) - len(errors)
+            if errors:
+                print(f"    ⚠️  {len(errors)} threads failed in this batch")
             print(f"    ✓ {total} total labeled & moved out of inbox so far...")
-            time.sleep(0.2)  # gentle rate limiting
+            time.sleep(0.2)
 
         page_token = response.get('nextPageToken')
         if not page_token:
@@ -188,7 +153,6 @@ def label_threads(service, label_name, label_id, queries):
     return total
 
 
-# ── MAIN ─────────────────────────────────────────────────────
 def main():
     print("=" * 60)
     print("  Gmail Job Labeler — No Time Limits!")
@@ -198,9 +162,13 @@ def main():
     service = get_gmail_service()
     print("  ✓ Authenticated!\n")
 
+    existing_labels = with_retry(
+        lambda: service.users().labels().list(userId='me').execute()
+    ).get('labels', [])
+
     grand_total = 0
     for label_name, queries in LABELS.items():
-        label_id = get_or_create_label(service, label_name)
+        label_id = get_or_create_label(service, label_name, existing_labels)
         count = label_threads(service, label_name, label_id, queries)
         grand_total += count
 
@@ -220,7 +188,7 @@ if __name__ == '__main__':
 #  STEP 1 — Install dependencies
 #  Open terminal in VS Code and run:
 #
-#    pip install google-auth google-auth-oauthlib google-api-python-client
+#    pip install -r requirements.txt
 #
 #  STEP 2 — Get credentials.json from Google Cloud
 #
