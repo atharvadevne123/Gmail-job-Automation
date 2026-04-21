@@ -1,5 +1,7 @@
 # 📬 Gmail Job Search Automation
 
+![CI](https://github.com/atharvadevne123/Gmail-job-Automation/actions/workflows/ci.yml/badge.svg)
+
 **By [Atharva Devne](https://github.com/atharvadevne123)**
 
 A collection of scripts to automatically organize your job search emails in Gmail — labels rejections, applications, and interviews, and moves them out of your inbox. Built to handle 14,000+ emails with no manual work.
@@ -117,6 +119,24 @@ Scripts scan for these phrases found across real rejection emails:
 - `token.pickle` is saved after first login — delete it to re-authenticate
 - Permanently deleted emails cannot be recovered
 - Daily Gmail API quota resets at midnight Pacific Time
+
+---
+
+## 🧪 Testing
+
+The project includes a pytest suite that mocks all Gmail API calls — no credentials required to run tests.
+
+**Install test dependencies and run:**
+```bash
+pip install -r requirements.txt
+pip install pytest
+python -m pytest tests/ -v --tb=short
+```
+
+**Test coverage:**
+- `tests/test_auth.py` — `with_retry()` exponential backoff (6 tests)
+- `tests/test_labeler.py` — label lookup/creation and thread pagination (5 tests)
+- `tests/test_delete.py` — label ID lookup and batch trash operations (5 tests)
 
 ---
 
