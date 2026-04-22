@@ -1,10 +1,9 @@
 import logging
 import time
-from typing import Any
+from typing import Any, Optional
 
 from auth import get_gmail_service, with_retry
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 LABEL_NAME = "Job Interviews"
@@ -78,7 +77,7 @@ def label_interview_threads(service: Any, label_id: str) -> int:
             chunk = thread_ids[i:i + BATCH_SIZE]
             errors: list[Exception] = []
 
-            def _cb(req_id: str, response: Any, exception: Exception | None) -> None:
+            def _cb(req_id: str, response: Any, exception: "Optional[Exception]") -> None:
                 if exception:
                     errors.append(exception)
 
@@ -108,7 +107,8 @@ def label_interview_threads(service: Any, label_id: str) -> int:
 
 
 def main() -> None:
-    logger.info("Gmail Interview Labeler — No Time Limits!")
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    logger.info("Gmail Interview Labeler - No Time Limits!")
 
     logger.info("Authenticating with Gmail...")
     service = get_gmail_service()
