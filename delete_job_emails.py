@@ -91,8 +91,8 @@ def main() -> None:
     logger.info("  Emails are recoverable for 30 days from Gmail → Trash.")
     logger.info("=" * 60)
 
-    confirm = input("\n  Type YES to confirm: ")
-    if confirm.strip() != "YES":
+    confirm = input("\n  Type YES (uppercase) to confirm: ")
+    if confirm.strip().upper() != "YES":
         logger.info("  Cancelled. Nothing was changed.")
         return
 
