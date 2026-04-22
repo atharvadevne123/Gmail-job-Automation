@@ -14,10 +14,9 @@ A collection of scripts to automatically organize your job search emails in Gmai
 |------|------|-------------|
 | `gmail_labeler.py` | Python | **Main script** — labels both rejections & applications. No time limit. Run on your computer. |
 | `label_interviews.py` | Python | Labels all interview invitation emails into "Job Interviews" |
-| `delete_job_emails.py` | Python | Permanently deletes all emails in Job Rejections & Job Applications Applied labels |
-| `labelRejectionEmails.gs` | Google Apps Script | Labels rejection emails (auto-resumes every 6 min to beat quota) |
-| `labelAppliedJobs.gs` | Google Apps Script | Labels application confirmation emails (auto-resumes every 6 min) |
-| `gmail-rejection-labeler.html` | HTML | Browser-based tool with OAuth2 flow for labeling rejections |
+| `delete_job_emails.py` | Python | Moves all emails in Job Rejections & Job Applications Applied labels to Trash |
+| `.env.example` | Config | Template for `GMAIL_CREDENTIALS_PATH` and `GMAIL_TOKEN_PATH` env vars |
+| `requirements.txt` | Config | All dependencies including pytest and ruff |
 
 ---
 
@@ -46,7 +45,11 @@ pip3 install google-auth google-auth-oauthlib google-api-python-client
 5. Place in same folder as the scripts
 
 **3. (Optional) Override paths via environment variables**
+
+Copy `.env.example` and set the paths if your files are not in the script directory:
 ```bash
+cp .env.example .env
+# Edit .env, then:
 export GMAIL_CREDENTIALS_PATH=/path/to/credentials.json
 export GMAIL_TOKEN_PATH=/path/to/token.pickle
 ```
@@ -132,10 +135,9 @@ Scripts scan for these phrases found across real rejection emails:
 
 The project includes a pytest suite that mocks all Gmail API calls — no credentials required to run tests.
 
-**Install test dependencies and run:**
+**Install dependencies and run:**
 ```bash
 pip install -r requirements.txt
-pip install pytest
 python -m pytest tests/ -v --tb=short
 ```
 
