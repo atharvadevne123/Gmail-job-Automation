@@ -4,4 +4,4 @@ google-api-python-client>=2.194.0
 
 # Dev / test
 pytest>=8.4.2
-ruff>=0.1.0
+ruff>=0.15.12
