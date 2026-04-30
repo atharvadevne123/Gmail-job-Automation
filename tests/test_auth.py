@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, mock_open, patch
+
+import pytest
 from googleapiclient.errors import HttpError
 
 from auth import with_retry
@@ -57,6 +58,29 @@ def test_with_retry_retries_on_500():
     with patch("time.sleep"):
         result = with_retry(fn, max_retries=2)
     assert result == "done"
+
+
+def test_with_retry_retries_on_connection_error():
+    fn = MagicMock(side_effect=[ConnectionError("reset"), "ok"])
+    with patch("time.sleep"):
+        result = with_retry(fn, max_retries=3)
+    assert result == "ok"
+    assert fn.call_count == 2
+
+
+def test_with_retry_retries_on_timeout_error():
+    fn = MagicMock(side_effect=[TimeoutError("timed out"), "ok"])
+    with patch("time.sleep"):
+        result = with_retry(fn, max_retries=3)
+    assert result == "ok"
+    assert fn.call_count == 2
+
+
+def test_with_retry_raises_network_error_after_max_retries():
+    fn = MagicMock(side_effect=OSError("network down"))
+    with patch("time.sleep"), pytest.raises(OSError):
+        with_retry(fn, max_retries=2)
+    assert fn.call_count == 2
 
 
 # --- get_gmail_service tests ---

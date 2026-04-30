@@ -13,3 +13,18 @@ authors = [{name = "atharvadevne123", email = "devneatharva@gmail.com"}]
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+
+[tool.coverage.run]
+source = ["."]
+omit = ["tests/*", "setup.py"]
+
+[tool.coverage.report]
+exclude_lines = ["if __name__ == .__main__.:"]

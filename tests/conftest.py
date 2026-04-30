@@ -1,6 +1,7 @@
 import sys
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 # Stub out google-auth and google-api-python-client before any module import
 # so tests run without the system cryptography C extension.

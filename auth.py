@@ -49,8 +49,11 @@ def get_gmail_service() -> Any:
     return build('gmail', 'v1', credentials=creds)
 
 
+_TRANSIENT_NETWORK_ERRORS = (OSError, ConnectionError, TimeoutError)
+
+
 def with_retry(fn: Callable[[], Any], max_retries: int = 5) -> Any:
-    """Call fn() with exponential backoff on transient API errors (429/500/503)."""
+    """Call fn() with exponential backoff on transient API and network errors."""
     for attempt in range(max_retries):
         try:
             return fn()
@@ -58,6 +61,13 @@ def with_retry(fn: Callable[[], Any], max_retries: int = 5) -> Any:
             if e.resp.status in (429, 500, 503) and attempt < max_retries - 1:
                 wait = 2 ** attempt
                 logger.warning("API error %s, retrying in %ss...", e.resp.status, wait)
+                time.sleep(wait)
+            else:
+                raise
+        except _TRANSIENT_NETWORK_ERRORS as e:
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt
+                logger.warning("Network error %s, retrying in %ss...", type(e).__name__, wait)
                 time.sleep(wait)
             else:
                 raise

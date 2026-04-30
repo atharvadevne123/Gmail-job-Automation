@@ -77,7 +77,7 @@ def label_interview_threads(service: Any, label_id: str) -> int:
             chunk = thread_ids[i:i + BATCH_SIZE]
             errors: list[Exception] = []
 
-            def _cb(req_id: str, response: Any, exception: "Optional[Exception]") -> None:
+            def _cb(req_id: str, response: Any, exception: Optional[Exception]) -> None:
                 if exception:
                     errors.append(exception)
 

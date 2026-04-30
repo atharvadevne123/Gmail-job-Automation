@@ -70,3 +70,26 @@ def test_label_threads_pagination(mock_service):
 
     assert count == 8
     assert mock_batch.execute.call_count == 2
+
+
+def test_dry_run_does_not_create_label(mock_service):
+    existing: list = []
+    label_id = get_or_create_label(mock_service, 'Job Rejections', existing, dry_run=True)
+    assert label_id.startswith('dry_run_')
+    mock_service.users.return_value.labels.return_value.create.assert_not_called()
+
+
+def test_dry_run_counts_without_modifying(mock_service):
+    threads = [{'id': f'tid{i}'} for i in range(4)]
+    mock_service.users.return_value.threads.return_value.list.return_value.execute.return_value = {
+        'threads': threads
+    }
+    mock_batch = MagicMock()
+    mock_service.new_batch_http_request.return_value = mock_batch
+
+    with patch('gmail_labeler.with_retry', side_effect=lambda fn, **kw: fn()), \
+         patch('time.sleep'):
+        count = label_threads(mock_service, 'Job Rejections', 'label123', ['q1'], dry_run=True)
+
+    assert count == 4
+    mock_batch.execute.assert_not_called()

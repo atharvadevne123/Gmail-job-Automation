@@ -8,9 +8,10 @@
 #  3. Run: python gmail_labeler.py
 # ============================================================
 
+import argparse
 import logging
 import time
-from typing import Any
+from typing import Any, Optional
 
 from auth import get_gmail_service, with_retry
 
@@ -87,11 +88,15 @@ LABELS = {
 BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
-def get_or_create_label(service: Any, name: str, existing_labels: list) -> str:
+def get_or_create_label(service: Any, name: str, existing_labels: list, dry_run: bool = False) -> str:
     for label in existing_labels:
         if label['name'] == name:
             logger.info("  ✓ Found existing label: '%s'", name)
             return label['id']
+
+    if dry_run:
+        logger.info("  [dry-run] Would create label: '%s'", name)
+        return f"dry_run_{name}"
 
     label = with_retry(lambda: service.users().labels().create(
         userId='me',
@@ -101,7 +106,7 @@ def get_or_create_label(service: Any, name: str, existing_labels: list) -> str:
     return label['id']
 
 
-def label_threads(service: Any, label_name: str, label_id: str, queries: list) -> int:
+def label_threads(service: Any, label_name: str, label_id: str, queries: list, dry_run: bool = False) -> int:
     query = ' OR '.join(queries)
     logger.info("\n🔍 Searching for: '%s'", label_name)
     logger.info("   Query has %d keyword patterns\n", len(queries))
@@ -122,14 +127,25 @@ def label_threads(service: Any, label_name: str, label_id: str, queries: list) -
         if not threads:
             break
 
-        logger.info("  Page %d: found %d threads — labeling & archiving...", page, len(threads))
+        action = "would label" if dry_run else "labeling & archiving"
+        logger.info("  Page %d: found %d threads — %s...", page, len(threads), action)
 
         thread_ids = [t['id'] for t in threads]
+
+        if dry_run:
+            total += len(thread_ids)
+            logger.info("    [dry-run] %d total would be labeled so far...", total)
+            page_token = response.get('nextPageToken')
+            if not page_token:
+                break
+            time.sleep(0.3)
+            continue
+
         for i in range(0, len(thread_ids), BATCH_SIZE):
             chunk = thread_ids[i:i + BATCH_SIZE]
             errors = []
 
-            def _cb(req_id, response, exception):
+            def _cb(req_id: str, response: Any, exception: Optional[Exception]) -> None:
                 if exception:
                     errors.append(exception)
 
@@ -159,9 +175,21 @@ def label_threads(service: Any, label_name: str, label_id: str, queries: list) -
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Label job-search emails in Gmail.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview how many emails would be labeled without making any changes.",
+    )
+    args = parser.parse_args()
+    dry_run: bool = args.dry_run
+
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     logger.info("=" * 60)
-    logger.info("  Gmail Job Labeler — No Time Limits!")
+    if dry_run:
+        logger.info("  Gmail Job Labeler — DRY RUN (no changes will be made)")
+    else:
+        logger.info("  Gmail Job Labeler — No Time Limits!")
     logger.info("=" * 60)
 
     logger.info("\n🔐 Authenticating with Gmail...")
@@ -174,49 +202,17 @@ def main() -> None:
 
     grand_total = 0
     for label_name, queries in LABELS.items():
-        label_id = get_or_create_label(service, label_name, existing_labels)
-        count = label_threads(service, label_name, label_id, queries)
+        label_id = get_or_create_label(service, label_name, existing_labels, dry_run=dry_run)
+        count = label_threads(service, label_name, label_id, queries, dry_run=dry_run)
         grand_total += count
 
     logger.info("=" * 60)
-    logger.info("  🎉 ALL DONE! Grand total: %d emails labeled.", grand_total)
+    if dry_run:
+        logger.info("  [dry-run] Would label %d emails total. Run without --dry-run to apply.", grand_total)
+    else:
+        logger.info("  🎉 ALL DONE! Grand total: %d emails labeled.", grand_total)
     logger.info("=" * 60)
 
 
 if __name__ == '__main__':
     main()
-
-
-# ============================================================
-#  README — ONE-TIME SETUP (takes ~3 minutes)
-# ============================================================
-#
-#  STEP 1 — Install dependencies
-#  Open terminal in VS Code and run:
-#
-#    pip install -r requirements.txt
-#
-#  STEP 2 — Get credentials.json from Google Cloud
-#
-#    1. Go to https://console.cloud.google.com
-#    2. Create a new project (or use existing)
-#    3. Go to "APIs & Services" → "Enable APIs"
-#    4. Search for "Gmail API" → Enable it
-#    5. Go to "APIs & Services" → "Credentials"
-#    6. Click "Create Credentials" → "OAuth 2.0 Client ID"
-#    7. Application type: "Desktop app" → Create
-#    8. Download the JSON file
-#    9. Rename it to: credentials.json
-#   10. Put it in the SAME folder as this script
-#
-#  STEP 3 — Run the script
-#
-#    python gmail_labeler.py
-#
-#    A browser window will open asking you to sign in to Google.
-#    Click "Allow" — then come back to VS Code.
-#    The script runs until ALL emails are labeled. No time limit!
-#
-#  NOTE: token.pickle is saved after first login so you won't
-#  need to sign in again next time you run it.
-# ============================================================
