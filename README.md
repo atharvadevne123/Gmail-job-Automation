@@ -16,7 +16,8 @@ A collection of scripts to automatically organize your job search emails in Gmai
 | `label_interviews.py` | Python | Labels all interview invitation emails into "Job Interviews" |
 | `delete_job_emails.py` | Python | Moves all emails in Job Rejections & Job Applications Applied labels to Trash |
 | `.env.example` | Config | Template for `GMAIL_CREDENTIALS_PATH` and `GMAIL_TOKEN_PATH` env vars |
-| `requirements.txt` | Config | All dependencies including pytest and ruff |
+| `requirements.txt` | Config | All dependencies including pytest, pytest-cov, and ruff |
+| `Makefile` | Config | Shortcuts: `make test`, `make lint`, `make fix`, `make clean` |
 
 ---
 
@@ -60,6 +61,11 @@ export GMAIL_TOKEN_PATH=/path/to/token.pickle
 ---
 
 ### Running the Scripts
+
+**Preview what would be labeled (no changes made):**
+```bash
+python3 gmail_labeler.py --dry-run
+```
 
 **Label rejections + applications (main script):**
 ```bash
@@ -138,14 +144,25 @@ The project includes a pytest suite that mocks all Gmail API calls — no creden
 **Install dependencies and run:**
 ```bash
 pip install -r requirements.txt
-python -m pytest tests/ -v --tb=short
+python -m pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
+# or via Makefile:
+make test
 ```
 
-**Test coverage:**
-- `tests/test_auth.py` — `with_retry()` backoff + `get_gmail_service` credential handling (8 tests)
-- `tests/test_labeler.py` — label lookup/creation and thread pagination (5 tests)
+**Test coverage (27 tests total):**
+- `tests/test_auth.py` — `with_retry()` backoff, network error retry, `get_gmail_service` credential handling (11 tests)
+- `tests/test_labeler.py` — label lookup/creation, thread pagination, `--dry-run` mode (7 tests)
 - `tests/test_delete.py` — label ID lookup and batch trash operations (5 tests)
 - `tests/test_label_interviews.py` — interview label creation and thread labeling (4 tests)
+
+**Dev shortcuts (Makefile):**
+```bash
+make install   # pip install -r requirements.txt
+make test      # pytest with coverage
+make lint      # ruff check
+make fix       # ruff --fix
+make clean     # remove __pycache__, .coverage, etc.
+```
 
 ---
 
