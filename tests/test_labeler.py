@@ -74,9 +74,11 @@ def test_label_threads_pagination(mock_service):
 
 def test_dry_run_does_not_create_label(mock_service):
     existing: list = []
+    create_mock = mock_service.users.return_value.labels.return_value.create
+    create_mock.reset_mock()
     label_id = get_or_create_label(mock_service, 'Job Rejections', existing, dry_run=True)
     assert label_id.startswith('dry_run_')
-    mock_service.users.return_value.labels.return_value.create.assert_not_called()
+    create_mock.assert_not_called()
 
 
 def test_dry_run_counts_without_modifying(mock_service):
