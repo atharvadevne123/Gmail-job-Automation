@@ -203,6 +203,7 @@ def label_threads(service: Any, label_name: str, label_id: str, queries: list, d
 
 
 def main() -> None:
+    """Entry point: authenticate, create labels, and process all query groups."""
     parser = argparse.ArgumentParser(description="Label job-search emails in Gmail.")
     parser.add_argument(
         "--dry-run",
