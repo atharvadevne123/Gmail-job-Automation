@@ -132,6 +132,7 @@ def label_interview_threads(service: Any, label_id: str) -> int:
 
 
 def main() -> None:
+    """Entry point: authenticate and label all interview-related threads."""
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     logger.info("Gmail Interview Labeler - No Time Limits!")
 
