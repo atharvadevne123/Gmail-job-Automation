@@ -1,12 +1,10 @@
-# ============================================================
-#  Gmail Job Labeler — runs on your computer, NO time limits
-#  Labels ALL rejection + application emails in one go
-#
-#  SETUP (one time):
-#  1. pip install -r requirements.txt
-#  2. Get credentials.json from Google Cloud Console (see README below)
-#  3. Run: python gmail_labeler.py
-# ============================================================
+"""Label job-search emails in Gmail as rejections or applications.
+
+Searches your Gmail inbox for keyword patterns and applies the labels
+"Job Rejections" and "Job Applications Applied", archiving matched
+threads out of the inbox in batched API calls. Supports --dry-run
+mode to preview counts without making changes.
+"""
 
 import argparse
 import logging
