@@ -22,6 +22,15 @@ BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
 def get_label_id(service: Any, name: str) -> Optional[str]:
+    """Return the Gmail label ID for *name*, or ``None`` if it does not exist.
+
+    Args:
+        service: Authorised Gmail API service resource.
+        name: Exact display name of the label to look up.
+
+    Returns:
+        The label ID string, or ``None`` if no label with that name exists.
+    """
     results = with_retry(lambda: service.users().labels().list(userId='me').execute())
     for label in results.get('labels', []):
         if label['name'] == name:
