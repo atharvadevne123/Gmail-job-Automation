@@ -2,8 +2,10 @@
 
 Searches for invitation and scheduling keywords and applies the
 "Job Interviews" label, archiving matches out of the inbox.
+Supports --dry-run mode to preview counts without making any changes.
 """
 
+import argparse
 import logging
 import time
 from typing import Any, Optional
@@ -39,12 +41,14 @@ INTERVIEW_QUERIES: list[str] = [
 BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
-def get_or_create_label(service: Any, name: str) -> str:
+def get_or_create_label(service: Any, name: str, dry_run: bool = False) -> str:
     """Return the Gmail label ID for *name*, creating the label if absent.
 
     Args:
         service: Authorised Gmail API service resource.
         name: Display name of the label to find or create.
+        dry_run: When ``True``, skip the API create call and return a
+            placeholder ID prefixed with ``'dry_run_'``.
 
     Returns:
         The label ID string.
@@ -55,6 +59,10 @@ def get_or_create_label(service: Any, name: str) -> str:
             logger.info("Found existing label: '%s'", name)
             return label['id']
 
+    if dry_run:
+        logger.info("[dry-run] Would create label: '%s'", name)
+        return f"dry_run_{name}"
+
     label = with_retry(lambda: service.users().labels().create(
         userId='me',
         body={'name': name, 'labelListVisibility': 'labelShow', 'messageListVisibility': 'show'}
@@ -63,7 +71,7 @@ def get_or_create_label(service: Any, name: str) -> str:
     return label['id']
 
 
-def label_interview_threads(service: Any, label_id: str) -> int:
+def label_interview_threads(service: Any, label_id: str, dry_run: bool = False) -> int:
     """Apply *label_id* to all interview-related threads and archive them.
 
     Paginates through Gmail search results using ``INTERVIEW_QUERIES``,
@@ -72,9 +80,11 @@ def label_interview_threads(service: Any, label_id: str) -> int:
     Args:
         service: Authorised Gmail API service resource.
         label_id: The label ID to apply to each matched thread.
+        dry_run: When ``True``, count matching threads but do not modify them.
 
     Returns:
-        Total number of threads successfully labeled.
+        Total number of threads successfully labeled (or that would have been
+        labeled in dry-run mode).
     """
     query = ' OR '.join(INTERVIEW_QUERIES)
     logger.info("Searching for interview emails (%d patterns)...", len(INTERVIEW_QUERIES))
@@ -95,14 +105,25 @@ def label_interview_threads(service: Any, label_id: str) -> int:
         if not threads:
             break
 
-        logger.info("Page %d: found %d threads — labeling & archiving...", page, len(threads))
+        action = "would label" if dry_run else "labeling & archiving"
+        logger.info("Page %d: found %d threads — %s...", page, len(threads), action)
 
         thread_ids = [t['id'] for t in threads]
+
+        if dry_run:
+            total += len(thread_ids)
+            logger.info("[dry-run] %d total would be labeled so far...", total)
+            page_token = response.get('nextPageToken')
+            if not page_token:
+                break
+            time.sleep(0.3)
+            continue
+
         for i in range(0, len(thread_ids), BATCH_SIZE):
             chunk = thread_ids[i:i + BATCH_SIZE]
             errors: list[Exception] = []
 
-            def _cb(req_id: str, response: Any, exception: Optional[Exception]) -> None:
+            def _cb(req_id: str, resp: Any, exception: Optional[Exception]) -> None:
                 if exception:
                     errors.append(exception)
 
@@ -127,23 +148,41 @@ def label_interview_threads(service: Any, label_id: str) -> int:
 
         time.sleep(0.3)
 
-    logger.info("'%s' — DONE! Total: %d emails labeled.", LABEL_NAME, total)
+    if dry_run:
+        logger.info("[dry-run] '%s' — would label %d emails total.", LABEL_NAME, total)
+    else:
+        logger.info("'%s' — DONE! Total: %d emails labeled.", LABEL_NAME, total)
     return total
 
 
 def main() -> None:
     """Entry point: authenticate and label all interview-related threads."""
+    parser = argparse.ArgumentParser(description="Label interview emails in Gmail.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview how many emails would be labeled without making any changes.",
+    )
+    args = parser.parse_args()
+    dry_run: bool = args.dry_run
+
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-    logger.info("Gmail Interview Labeler - No Time Limits!")
+    if dry_run:
+        logger.info("Gmail Interview Labeler - DRY RUN (no changes will be made)")
+    else:
+        logger.info("Gmail Interview Labeler - No Time Limits!")
 
     logger.info("Authenticating with Gmail...")
     service = get_gmail_service()
     logger.info("Authenticated!")
 
-    label_id = get_or_create_label(service, LABEL_NAME)
-    count = label_interview_threads(service, label_id)
+    label_id = get_or_create_label(service, LABEL_NAME, dry_run=dry_run)
+    count = label_interview_threads(service, label_id, dry_run=dry_run)
 
-    logger.info("ALL DONE! %d interview emails labeled.", count)
+    if dry_run:
+        logger.info("[dry-run] Would label %d interview emails total. Run without --dry-run to apply.", count)
+    else:
+        logger.info("ALL DONE! %d interview emails labeled.", count)
 
 
 if __name__ == '__main__':
