@@ -1,11 +1,9 @@
-# ============================================================
-#  Gmail Job Emails — Move to Trash
-#  Moves all emails under:
-#  - "Job Rejections"
-#  - "Job Applications Applied"
-#  to Trash. Recoverable for 30 days via Gmail → Trash.
-#  To permanently delete immediately: Gmail → Trash → Empty Trash
-# ============================================================
+"""Move job-search labeled emails to Gmail Trash and remove the labels.
+
+Iterates over the "Job Rejections" and "Job Applications Applied" labels,
+trashing all threads in batches and then deleting each label. Emails are
+recoverable from Trash for 30 days.
+"""
 
 import logging
 import time
