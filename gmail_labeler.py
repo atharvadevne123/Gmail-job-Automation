@@ -118,6 +118,23 @@ def get_or_create_label(service: Any, name: str, existing_labels: list, dry_run:
 
 
 def label_threads(service: Any, label_name: str, label_id: str, queries: list, dry_run: bool = False) -> int:
+    """Search Gmail for threads matching any query pattern and apply a label.
+
+    Paginates through all results (up to 500 threads per page), applies
+    *label_id* and removes the INBOX label from each thread in batches of
+    ``BATCH_SIZE``.
+
+    Args:
+        service: Authorised Gmail API service resource.
+        label_name: Human-readable label name used only for log messages.
+        label_id: The label ID returned by :func:`get_or_create_label`.
+        queries: List of Gmail query strings joined with ``OR``.
+        dry_run: When ``True``, count matching threads but do not modify them.
+
+    Returns:
+        Total number of threads successfully labeled (or that would have been
+        labeled in dry-run mode).
+    """
     query = ' OR '.join(queries)
     logger.info("\n🔍 Searching for: '%s'", label_name)
     logger.info("   Query has %d keyword patterns\n", len(queries))
