@@ -39,6 +39,19 @@ def get_label_id(service: Any, name: str) -> Optional[str]:
 
 
 def trash_all_in_label(service: Any, label_name: str, label_id: str) -> int:
+    """Move every thread under *label_id* to Trash, then delete the label.
+
+    Paginates through all threads bearing *label_id*, trashing them in
+    batches of ``BATCH_SIZE``, and finally removes the label from Gmail.
+
+    Args:
+        service: Authorised Gmail API service resource.
+        label_name: Human-readable label name used only for log messages.
+        label_id: The label ID whose threads should be trashed.
+
+    Returns:
+        Total number of threads successfully moved to Trash.
+    """
     logger.info("\n🗑️  Moving all emails in '%s' to Trash...", label_name)
     page_token = None
     page = 0
