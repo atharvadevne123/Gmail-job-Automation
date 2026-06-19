@@ -5,6 +5,7 @@ trashing all threads in batches and then deleting each label. Emails are
 recoverable from Trash for 30 days.
 """
 
+import argparse
 import logging
 import time
 from typing import Any, Optional
@@ -103,6 +104,16 @@ def trash_all_in_label(service: Any, label_name: str, label_id: str) -> int:
 
 def main() -> None:
     """Entry point: confirm with user, then trash all job-related labeled emails."""
+    parser = argparse.ArgumentParser(
+        description="Move job-search labeled Gmail emails to Trash."
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip the interactive confirmation prompt (non-interactive / CI use).",
+    )
+    args = parser.parse_args()
+
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     logger.info("=" * 60)
     logger.info("  🗑️  Gmail Job Emails — Move to Trash")
@@ -112,8 +123,13 @@ def main() -> None:
     logger.info("  Emails are recoverable for 30 days from Gmail → Trash.")
     logger.info("=" * 60)
 
-    confirm = input("\n  Type YES (uppercase) to confirm: ")
-    if confirm.strip().upper() != "YES":
+    if args.yes:
+        confirmed = True
+    else:
+        confirm = input("\n  Type YES (uppercase) to confirm: ")
+        confirmed = confirm.strip().upper() == "YES"
+
+    if not confirmed:
         logger.info("  Cancelled. Nothing was changed.")
         return
 
