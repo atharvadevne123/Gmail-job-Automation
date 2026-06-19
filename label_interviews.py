@@ -1,3 +1,9 @@
+"""Label interview-invitation emails in Gmail under 'Job Interviews'.
+
+Searches for invitation and scheduling keywords and applies the
+"Job Interviews" label, archiving matches out of the inbox.
+"""
+
 import logging
 import time
 from typing import Any, Optional
