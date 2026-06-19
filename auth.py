@@ -1,3 +1,5 @@
+"""Gmail OAuth2 authentication and resilient API call utilities."""
+
 import logging
 import os
 import pickle
@@ -20,7 +22,19 @@ CREDENTIALS_PATH = os.environ.get('GMAIL_CREDENTIALS_PATH', os.path.join(BASE_DI
 
 
 def get_gmail_service() -> Any:
-    """Authenticate and return an authorized Gmail API service object."""
+    """Authenticate and return an authorized Gmail API service object.
+
+    Loads cached credentials from TOKEN_PATH if available. Refreshes
+    the token automatically when expired; falls back to a browser-based
+    OAuth2 flow using the client secrets at CREDENTIALS_PATH.
+
+    Returns:
+        A ``googleapiclient.discovery.Resource`` for the Gmail v1 API.
+
+    Raises:
+        FileNotFoundError: If no cached token exists and credentials.json
+            is not found at CREDENTIALS_PATH.
+    """
     creds = None
     if os.path.exists(TOKEN_PATH):
         with open(TOKEN_PATH, 'rb') as f:
