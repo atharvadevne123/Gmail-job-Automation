@@ -112,9 +112,15 @@ def main() -> None:
         action="store_true",
         help="Skip the interactive confirmation prompt (non-interactive / CI use).",
     )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Set the logging verbosity level (default: INFO).",
+    )
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    logging.basicConfig(level=getattr(logging, args.log_level), format='%(message)s')
     logger.info("=" * 60)
     logger.info("  🗑️  Gmail Job Emails — Move to Trash")
     logger.info("  The following labels will be emptied and removed:")
