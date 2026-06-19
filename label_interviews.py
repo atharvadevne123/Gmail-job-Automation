@@ -40,7 +40,15 @@ BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
 def get_or_create_label(service: Any, name: str) -> str:
-    """Return the ID of the label, creating it if needed."""
+    """Return the Gmail label ID for *name*, creating the label if absent.
+
+    Args:
+        service: Authorised Gmail API service resource.
+        name: Display name of the label to find or create.
+
+    Returns:
+        The label ID string.
+    """
     results = with_retry(lambda: service.users().labels().list(userId='me').execute())
     for label in results.get('labels', []):
         if label['name'] == name:
@@ -56,7 +64,18 @@ def get_or_create_label(service: Any, name: str) -> str:
 
 
 def label_interview_threads(service: Any, label_id: str) -> int:
-    """Label and archive all interview-related threads. Returns count labeled."""
+    """Apply *label_id* to all interview-related threads and archive them.
+
+    Paginates through Gmail search results using ``INTERVIEW_QUERIES``,
+    processing matched threads in batches of ``BATCH_SIZE``.
+
+    Args:
+        service: Authorised Gmail API service resource.
+        label_id: The label ID to apply to each matched thread.
+
+    Returns:
+        Total number of threads successfully labeled.
+    """
     query = ' OR '.join(INTERVIEW_QUERIES)
     logger.info("Searching for interview emails (%d patterns)...", len(INTERVIEW_QUERIES))
 
