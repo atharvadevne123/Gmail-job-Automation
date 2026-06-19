@@ -67,7 +67,25 @@ _TRANSIENT_NETWORK_ERRORS = (OSError, ConnectionError, TimeoutError)
 
 
 def with_retry(fn: Callable[[], Any], max_retries: int = 5) -> Any:
-    """Call fn() with exponential backoff on transient API and network errors."""
+    """Call ``fn()`` with exponential backoff on transient errors.
+
+    Retries on HTTP 429, 500, 503 responses and on transient network
+    exceptions (``OSError``, ``ConnectionError``, ``TimeoutError``).
+    Non-retryable ``HttpError`` codes are re-raised immediately.
+
+    Args:
+        fn: Zero-argument callable to invoke.
+        max_retries: Maximum number of attempts before re-raising the
+            last exception. Defaults to 5.
+
+    Returns:
+        Whatever ``fn()`` returns on success.
+
+    Raises:
+        HttpError: On non-retryable HTTP errors, or after exhausting retries.
+        OSError | ConnectionError | TimeoutError: After exhausting retries on
+            network failures.
+    """
     for attempt in range(max_retries):
         try:
             return fn()
