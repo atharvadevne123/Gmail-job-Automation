@@ -163,10 +163,16 @@ def main() -> None:
         action="store_true",
         help="Preview how many emails would be labeled without making any changes.",
     )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Set the logging verbosity level (default: INFO).",
+    )
     args = parser.parse_args()
     dry_run: bool = args.dry_run
 
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    logging.basicConfig(level=getattr(logging, args.log_level), format='%(asctime)s %(levelname)s %(message)s')
     if dry_run:
         logger.info("Gmail Interview Labeler - DRY RUN (no changes will be made)")
     else:
