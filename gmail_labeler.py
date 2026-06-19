@@ -87,6 +87,19 @@ BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
 def get_or_create_label(service: Any, name: str, existing_labels: list, dry_run: bool = False) -> str:
+    """Return the ID of a Gmail label, creating it if absent.
+
+    Args:
+        service: Authorised Gmail API service resource.
+        name: Display name of the label to find or create.
+        existing_labels: List of label dicts already fetched from the API
+            (each must have ``'name'`` and ``'id'`` keys).
+        dry_run: When ``True``, skip the API create call and return a
+            placeholder ID prefixed with ``'dry_run_'``.
+
+    Returns:
+        The label ID string.
+    """
     for label in existing_labels:
         if label['name'] == name:
             logger.info("  ✓ Found existing label: '%s'", name)
