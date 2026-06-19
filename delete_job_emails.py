@@ -76,7 +76,7 @@ def trash_all_in_label(service: Any, label_name: str, label_id: str) -> int:
             chunk = thread_ids[i:i + BATCH_SIZE]
             errors = []
 
-            def _cb(req_id, response, exception):
+            def _cb(req_id: str, resp: Any, exception: Optional[Exception]) -> None:
                 if exception:
                     errors.append(exception)
 
