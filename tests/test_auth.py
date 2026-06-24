@@ -4,13 +4,17 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from googleapiclient.errors import HttpError
 
-from auth import is_authenticated, with_retry
+from auth import SCOPES, is_authenticated, with_retry
 
 
 def _err(status: int) -> HttpError:
     resp = MagicMock()
     resp.status = status
     return HttpError(resp=resp, content=b"error")
+
+
+def test_scopes_contains_gmail_modify():
+    assert any("gmail.modify" in s for s in SCOPES)
 
 
 def test_with_retry_success():
