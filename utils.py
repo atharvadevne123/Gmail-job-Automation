@@ -14,6 +14,7 @@ __all__ = [
     "format_duration",
     "sanitize_query",
     "retry",
+    "truncate",
 ]
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -55,6 +56,13 @@ def format_duration(seconds: float) -> str:
 def sanitize_query(query: str) -> str:
     """Remove duplicate whitespace and trim a Gmail search query."""
     return re.sub(r" {2,}", " ", query).strip()
+
+
+def truncate(text: str, max_length: int, suffix: str = "...") -> str:
+    """Truncate text to max_length, appending suffix if truncated."""
+    if len(text) <= max_length:
+        return text
+    return text[: max_length - len(suffix)] + suffix
 
 
 def retry(
