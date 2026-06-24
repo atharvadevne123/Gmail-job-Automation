@@ -62,8 +62,7 @@ def test_trash_all_dry_run_no_actual_trash(mock_service):
     batch = MagicMock()
     mock_service.new_batch_http_request.return_value = batch
     with patch("delete_job_emails.with_retry", side_effect=lambda fn, **kw: fn()),          patch("time.sleep"):
-        count = trash_all_in_label(mock_service, "Job Rejections", "label123", dry_run=True)
-    assert count == 3
+        assert trash_all_in_label(mock_service, "Job Rejections", "label123", dry_run=True) == 3
     batch.execute.assert_not_called()
     mock_service.users.return_value.labels.return_value.delete.assert_not_called()
 
@@ -79,5 +78,16 @@ def test_trash_all_pagination(mock_service):
     batch = MagicMock()
     mock_service.new_batch_http_request.return_value = batch
     with patch("delete_job_emails.with_retry", side_effect=lambda fn, **kw: fn()),          patch("time.sleep"):
-        count = trash_all_in_label(mock_service, "Job Rejections", "label123")
-    assert count == 8
+        assert trash_all_in_label(mock_service, "Job Rejections", "label123") == 8
+
+
+@pytest.mark.parametrize("count", [0, 1, 10, 250])
+def test_trash_all_returns_exact_count(mock_service, count):
+    threads = [{"id": f"t{i}"} for i in range(count)]
+    mock_service.users.return_value.threads.return_value.list.return_value.execute.return_value = {
+        "threads": threads
+    }
+    batch = MagicMock()
+    mock_service.new_batch_http_request.return_value = batch
+    with patch("delete_job_emails.with_retry", side_effect=lambda fn, **kw: fn()),          patch("time.sleep"):
+        assert trash_all_in_label(mock_service, "Job Rejections", "label123") == count
