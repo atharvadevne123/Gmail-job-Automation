@@ -1,6 +1,8 @@
 # Gmail Job Search Automation
 
 ![CI](https://github.com/atharvadevne123/Gmail-job-Automation/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 **By [Atharva Devne](https://github.com/atharvadevne123)**
 
@@ -23,10 +25,6 @@ Gmail API (OAuth2)
            utils.py  ─── shared helpers (build_query, chunked, format_count)
 ```
 
-Each script authenticates independently via `auth.get_gmail_service()`.
-Heavy operations use `auth.with_retry()` for automatic exponential-backoff
-on 429/500/503 HTTP errors and transient network failures.
-
 ---
 
 ## Files Overview
@@ -39,8 +37,6 @@ on 429/500/503 HTTP errors and transient network failures.
 | `count_emails.py` | Python | Read-only thread counter (no changes). |
 | `utils.py` | Python | Shared helpers used by all scripts. |
 | `auth.py` | Python | Gmail OAuth2 + exponential-backoff retry. |
-| `Makefile` | Config | Shortcuts: `make test`, `make lint`, etc. |
-| `pyproject.toml` | Config | Build metadata, ruff, pytest, mypy settings. |
 
 ---
 
@@ -58,8 +54,10 @@ on 429/500/503 HTTP errors and transient network failures.
 # 1. Install
 pip install -r requirements.txt
 
-# 2. Get credentials.json from Google Cloud Console (Gmail API, OAuth Desktop)
-# 3. Run a dry-run first
+# 2. Get credentials.json from Google Cloud Console:
+#    New Project → Enable Gmail API → OAuth Desktop → Download → rename credentials.json
+
+# 3. Dry-run to preview (no changes made)
 python gmail_labeler.py --dry-run
 
 # 4. Apply labels
@@ -68,8 +66,10 @@ python gmail_labeler.py
 # 5. Label interview emails
 python label_interviews.py
 
-# 6. Count what was labeled
+# 6. Count labeled threads
 python count_emails.py
+python count_emails.py --json
+python count_emails.py --csv
 ```
 
 ---
@@ -81,15 +81,15 @@ python count_emails.py
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `get_gmail_service` | `() -> Any` | Authenticate and return Gmail API service. |
-| `with_retry` | `(fn, max_retries=5) -> Any` | Retry fn() with exponential backoff. |
-| `is_authenticated` | `() -> bool` | Check if valid token exists on disk. |
+| `with_retry` | `(fn, max_retries=5) -> Any` | Retry with exponential backoff. |
+| `is_authenticated` | `() -> bool` | Check if valid token exists. |
 
 ### `gmail_labeler.py`
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `get_or_create_label` | `(service, name, existing, dry_run) -> str` | Return label ID. |
-| `label_threads` | `(service, label_name, label_id, queries, dry_run, batch_size) -> int` | Label matching threads. |
+| `label_threads` | `(service, name, id, queries, dry_run, batch_size) -> int` | Label threads. |
 
 ### `label_interviews.py`
 
@@ -102,51 +102,47 @@ python count_emails.py
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `get_label_id` | `(service, name) -> Optional[str]` | Look up label ID by name. |
-| `trash_all_in_label` | `(service, label_name, label_id, dry_run) -> int` | Trash all threads in label. |
+| `get_label_id` | `(service, name) -> Optional[str]` | Look up label ID. |
+| `trash_all_in_label` | `(service, name, id, dry_run) -> int` | Trash all threads. |
 
 ### `count_emails.py`
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `count_label` | `(service, label_name) -> int` | Count threads in a label. |
-| `count_all` | `(service, labels) -> dict[str, int]` | Count multiple labels at once. |
+| `count_all` | `(service, labels) -> dict` | Count multiple labels. |
+| `export_csv` | `(counts, output) -> None` | Write counts as CSV. |
 
 ### `utils.py`
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `build_query` | `(terms, operator="OR") -> str` | Join search terms. |
+| `build_query` | `(terms, operator) -> str` | Join search terms. |
 | `chunked` | `(items, size) -> Generator` | Yield list chunks. |
-| `format_count` | `(n, singular, plural=None) -> str` | Human-readable count. |
-| `sanitize_query` | `(query) -> str` | Remove duplicate whitespace from a query. |
+| `format_count` | `(n, singular, plural) -> str` | Human-readable count. |
+| `format_duration` | `(seconds) -> str` | Human-readable duration. |
+| `sanitize_query` | `(query) -> str` | Normalize whitespace in query. |
 | `retry` | `(max_retries, delay, exceptions) -> Callable` | Retry decorator. |
-
----
-
-## Setup
-
-**1. Install dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-**2. Get credentials.json from Google Cloud**
-1. Go to [console.cloud.google.com](https://console.cloud.google.com)
-2. New Project → Enable **Gmail API**
-3. Credentials → Create → **OAuth 2.0 Client ID** → Desktop app
-4. Download JSON → rename to `credentials.json`
 
 ---
 
 ## Testing
 
 ```bash
-make test          # run pytest with coverage
-make lint          # ruff check
-make cover         # html coverage report
-make type-check    # mypy
+make test           # pytest with coverage
+make cover          # HTML coverage report (htmlcov/index.html)
+make lint           # ruff check
+make type-check     # mypy
+make check          # lint + type-check + test
 ```
+
+---
+
+## Setup
+
+1. Install dependencies: `pip install -r requirements.txt`
+2. Get `credentials.json` from [Google Cloud Console](https://console.cloud.google.com) (Gmail API, OAuth Desktop app)
+3. Optionally set `GMAIL_CREDENTIALS_PATH` and `GMAIL_TOKEN_PATH` env vars
 
 ---
 
