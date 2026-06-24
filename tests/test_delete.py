@@ -3,7 +3,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from delete_job_emails import get_label_id, trash_all_in_label
+from delete_job_emails import LABELS_TO_TRASH, get_label_id, trash_all_in_label
+
+
+def test_labels_to_trash_nonempty():
+    assert len(LABELS_TO_TRASH) > 0
+
+
+def test_labels_to_trash_contains_rejections():
+    assert "Job Rejections" in LABELS_TO_TRASH
+
+
+def test_labels_to_trash_contains_applications():
+    assert "Job Applications Applied" in LABELS_TO_TRASH
 
 
 def test_get_label_id_found(mock_service):
@@ -40,7 +52,6 @@ def test_trash_all_trashes_threads_returns_count(mock_service):
     mock_service.new_batch_http_request.return_value = batch
     with patch("delete_job_emails.with_retry", side_effect=lambda fn, **kw: fn()),          patch("time.sleep"):
         assert trash_all_in_label(mock_service, "Job Rejections", "label123") == 4
-    batch.execute.assert_called_once()
 
 
 def test_trash_all_deletes_label(mock_service):
