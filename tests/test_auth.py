@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from googleapiclient.errors import HttpError
 
-from auth import with_retry
+from auth import is_authenticated, with_retry
 
 
 def _err(status: int) -> HttpError:
@@ -78,8 +78,7 @@ def test_with_retry_raises_network_error_after_max():
 def test_with_retry_retries_all_retryable_statuses(status):
     fn = MagicMock(side_effect=[_err(status), "ok"])
     with patch("time.sleep"):
-        result = with_retry(fn, max_retries=3)
-    assert result == "ok"
+        assert with_retry(fn, max_retries=3) == "ok"
 
 
 @pytest.mark.parametrize("status", [400, 401, 403, 404, 422])
@@ -112,3 +111,28 @@ def test_get_gmail_service_loads_valid_token(tmp_path):
         mock_build.return_value = MagicMock()
         get_gmail_service()
         assert mock_build.called
+
+
+def test_is_authenticated_false_when_no_token(tmp_path):
+    with patch("auth.TOKEN_PATH", str(tmp_path / "token.pickle")):
+        assert is_authenticated() is False
+
+
+def test_is_authenticated_true_when_valid_token(tmp_path):
+    token_path = tmp_path / "token.pickle"
+    creds = MagicMock()
+    creds.valid = True
+    import pickle
+    token_path.write_bytes(pickle.dumps(creds))
+    with patch("auth.TOKEN_PATH", str(token_path)):
+        assert is_authenticated() is True
+
+
+def test_is_authenticated_false_when_token_invalid(tmp_path):
+    token_path = tmp_path / "token.pickle"
+    creds = MagicMock()
+    creds.valid = False
+    import pickle
+    token_path.write_bytes(pickle.dumps(creds))
+    with patch("auth.TOKEN_PATH", str(token_path)):
+        assert is_authenticated() is False
