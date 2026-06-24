@@ -1,9 +1,11 @@
 """Tests for count_emails module."""
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+import json
+import sys
 
 import pytest
 
-from count_emails import count_label
+from count_emails import count_all, count_label
 
 
 @pytest.fixture()
@@ -46,3 +48,28 @@ def test_count_label_missing_key_returns_zero(svc):
     }
     svc.users().labels().get().execute.return_value = {}
     assert count_label(svc, "NoKey") == 0
+
+
+def test_count_all_returns_dict(svc):
+    def mock_count(s, name):
+        return {"A": 10, "B": 5}.get(name, 0)
+
+    with patch("count_emails.count_label", side_effect=mock_count):
+        result = count_all(svc, ["A", "B"])
+    assert result == {"A": 10, "B": 5}
+
+
+def test_count_all_empty_labels(svc):
+    assert count_all(svc, []) == {}
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("Job Rejections", 3),
+    ("Job Applications Applied", 7),
+])
+def test_count_all_parametrize(svc, name, expected):
+    def side(s, n):
+        return expected if n == name else 0
+    with patch("count_emails.count_label", side_effect=side):
+        result = count_all(svc, [name])
+    assert result[name] == expected
