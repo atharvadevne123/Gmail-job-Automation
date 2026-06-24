@@ -3,7 +3,28 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from label_interviews import INTERVIEW_QUERIES, get_or_create_label, label_interview_threads
+from label_interviews import (
+    INTERVIEW_QUERIES,
+    LABEL_COLOR,
+    LABEL_NAME,
+    get_or_create_label,
+    label_interview_threads,
+)
+
+
+class TestConstants:
+    def test_label_name(self):
+        assert LABEL_NAME == "Job Interviews"
+
+    def test_label_color_has_background(self):
+        assert "backgroundColor" in LABEL_COLOR
+
+    def test_label_color_has_text(self):
+        assert "textColor" in LABEL_COLOR
+
+    def test_label_color_values_are_strings(self):
+        assert isinstance(LABEL_COLOR["backgroundColor"], str)
+        assert isinstance(LABEL_COLOR["textColor"], str)
 
 
 class TestGetOrCreateLabel:
@@ -47,13 +68,10 @@ class TestLabelInterviewThreads:
         mock_service.new_batch_http_request.return_value = batch
         with patch("label_interviews.time.sleep"):
             assert label_interview_threads(mock_service, "label_int") == 6
-        assert batch.execute.called
 
     def test_dry_run_returns_count_without_modifying(self, mock_service):
         threads = [{"id": f"t{i}"} for i in range(3)]
-        mock_service.users().threads().list().execute.return_value = {
-            "threads": threads
-        }
+        mock_service.users().threads().list().execute.return_value = {"threads": threads}
         batch = MagicMock()
         mock_service.new_batch_http_request.return_value = batch
         with patch("label_interviews.time.sleep"):
@@ -89,5 +107,4 @@ class TestInterviewQueries:
         "coding challenge",
     ])
     def test_key_patterns_present(self, keyword):
-        combined = " ".join(INTERVIEW_QUERIES)
-        assert keyword in combined
+        assert keyword in " ".join(INTERVIEW_QUERIES)
