@@ -7,7 +7,14 @@ import time
 from functools import wraps
 from typing import Any, Callable, Generator, TypeVar
 
-__all__ = ["build_query", "chunked", "format_count", "sanitize_query", "retry"]
+__all__ = [
+    "build_query",
+    "chunked",
+    "format_count",
+    "format_duration",
+    "sanitize_query",
+    "retry",
+]
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -31,6 +38,18 @@ def format_count(n: int, singular: str, plural: str | None = None) -> str:
     """Return a human-readable count string."""
     noun = singular if n == 1 else (plural or f"{singular}s")
     return f"{n} {noun}"
+
+
+def format_duration(seconds: float) -> str:
+    """Return a human-readable duration string from a number of seconds."""
+    seconds = max(0.0, seconds)
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes, secs = divmod(int(seconds), 60)
+    if minutes < 60:
+        return f"{minutes}m {secs:02d}s"
+    hours, mins = divmod(minutes, 60)
+    return f"{hours}h {mins:02d}m {secs:02d}s"
 
 
 def sanitize_query(query: str) -> str:
