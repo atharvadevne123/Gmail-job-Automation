@@ -35,6 +35,11 @@ INTERVIEW_QUERIES: list[str] = [
     '"technical interview"',
     '"hiring manager would like to connect"',
     'subject:"interview"',
+    '"excited to move you forward"',
+    '"move you to the next step"',
+    '"onsite interview"',
+    '"coding challenge"',
+    '"take-home assessment"',
 ]
 
 BATCH_SIZE = 100
