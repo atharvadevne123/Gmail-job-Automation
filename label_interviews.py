@@ -14,6 +14,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
 LABEL_NAME = "Job Interviews"
+LABEL_COLOR = {"backgroundColor": "#16a766", "textColor": "#ffffff"}
 
 INTERVIEW_QUERIES: list[str] = [
     '"invitation to interview"',
@@ -62,6 +63,7 @@ def get_or_create_label(service: Any, name: str) -> str:
                 "name": name,
                 "labelListVisibility": "labelShow",
                 "messageListVisibility": "show",
+                "color": LABEL_COLOR,
             },
         )
         .execute()
