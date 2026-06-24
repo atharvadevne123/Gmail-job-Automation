@@ -110,3 +110,16 @@ def thread_list():
     def _make(count: int, offset: int = 0) -> list[dict]:
         return [{"id": f"thread_{offset + i}"} for i in range(count)]
     return _make
+
+
+@pytest.fixture
+def service_with_threads(mock_service):
+    """Return a factory that configures mock_service with N threads."""
+    def _configure(count: int, next_token: str | None = None) -> MagicMock:
+        threads = [{"id": f"t{i}"} for i in range(count)]
+        result: dict = {"threads": threads}
+        if next_token:
+            result["nextPageToken"] = next_token
+        mock_service.users().threads().list().execute.return_value = result
+        return mock_service
+    return _configure
