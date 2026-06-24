@@ -79,7 +79,7 @@ LABELS: dict[str, list[str]] = {
     ],
 }
 
-BATCH_SIZE = 100
+BATCH_SIZE: int = 100
 
 
 def get_or_create_label(
@@ -118,6 +118,7 @@ def label_threads(
     label_id: str,
     queries: list[str],
     dry_run: bool = False,
+    batch_size: int = BATCH_SIZE,
 ) -> int:
     """Search for and label matching threads. Returns count labeled."""
     query = " OR ".join(queries)
@@ -152,8 +153,8 @@ def label_threads(
             time.sleep(0.3)
             continue
 
-        for i in range(0, len(thread_ids), BATCH_SIZE):
-            chunk = thread_ids[i : i + BATCH_SIZE]
+        for i in range(0, len(thread_ids), batch_size):
+            chunk = thread_ids[i : i + batch_size]
             errors: list[Exception] = []
 
             def _cb(req_id: str, response: Any, exception: Optional[Exception]) -> None:
