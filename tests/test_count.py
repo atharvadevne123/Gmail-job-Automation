@@ -1,11 +1,10 @@
 """Tests for count_emails module."""
+import io
 from unittest.mock import MagicMock, patch
-import json
-import sys
 
 import pytest
 
-from count_emails import count_all, count_label
+from count_emails import count_all, count_label, export_csv
 
 
 @pytest.fixture()
@@ -51,12 +50,8 @@ def test_count_label_missing_key_returns_zero(svc):
 
 
 def test_count_all_returns_dict(svc):
-    def mock_count(s, name):
-        return {"A": 10, "B": 5}.get(name, 0)
-
-    with patch("count_emails.count_label", side_effect=mock_count):
-        result = count_all(svc, ["A", "B"])
-    assert result == {"A": 10, "B": 5}
+    with patch("count_emails.count_label", side_effect=lambda s, n: {"A": 10, "B": 5}.get(n, 0)):
+        assert count_all(svc, ["A", "B"]) == {"A": 10, "B": 5}
 
 
 def test_count_all_empty_labels(svc):
@@ -68,8 +63,20 @@ def test_count_all_empty_labels(svc):
     ("Job Applications Applied", 7),
 ])
 def test_count_all_parametrize(svc, name, expected):
-    def side(s, n):
-        return expected if n == name else 0
-    with patch("count_emails.count_label", side_effect=side):
-        result = count_all(svc, [name])
-    assert result[name] == expected
+    with patch("count_emails.count_label", side_effect=lambda s, n: expected if n == name else 0):
+        assert count_all(svc, [name])[name] == expected
+
+
+def test_export_csv_header_and_rows():
+    buf = io.StringIO()
+    export_csv({"Job Rejections": 5, "Job Applications Applied": 12}, output=buf)
+    lines = buf.getvalue().strip().splitlines()
+    assert lines[0] == "label,threads"
+    assert "Job Rejections" in lines[1]
+    assert "5" in lines[1]
+
+
+def test_export_csv_empty():
+    buf = io.StringIO()
+    export_csv({}, output=buf)
+    assert buf.getvalue().strip() == "label,threads"
