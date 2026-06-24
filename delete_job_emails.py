@@ -38,6 +38,7 @@ def trash_all_in_label(
     page_token: Optional[str] = None
     page = 0
     total = 0
+    batch_errors = 0
 
     while True:
         page += 1
@@ -79,6 +80,7 @@ def trash_all_in_label(
             with_retry(batch.execute)
 
             total += len(chunk) - len(errors)
+            batch_errors += len(errors)
             if errors:
                 logger.warning("  %d threads failed in batch", len(errors))
             logger.info("  %d moved to Trash so far...", total)
@@ -90,7 +92,9 @@ def trash_all_in_label(
 
     if not dry_run:
         with_retry(lambda: service.users().labels().delete(userId="me", id=label_id).execute())
-        logger.info("%r — %d emails trashed + label removed.", label_name, total)
+        logger.info(
+            "%r — %d trashed, %d errors, label removed.", label_name, total, batch_errors
+        )
     else:
         logger.info("[dry-run] Would trash %d emails in %r.", total, label_name)
     return total
@@ -118,18 +122,22 @@ def main() -> None:
 
     service = get_gmail_service()
 
-    grand_total = 0
+    summary: dict[str, int] = {}
     for label_name in LABELS_TO_TRASH:
         label_id = get_label_id(service, label_name)
         if not label_id:
             logger.warning("  Label %r not found — skipping.", label_name)
             continue
         count = trash_all_in_label(service, label_name, label_id, dry_run=args.dry_run)
-        grand_total += count
+        summary[label_name] = count
 
+    grand_total = sum(summary.values())
     logger.info("=" * 60)
+    for name, n in summary.items():
+        logger.info("  %-35s %5d", name, n)
+    logger.info("-" * 60)
     if args.dry_run:
-        logger.info("  [dry-run] Would trash %d emails.", grand_total)
+        logger.info("  [dry-run] Would trash %d emails total.", grand_total)
     else:
         logger.info("  ALL DONE! %d emails moved to Trash.", grand_total)
     logger.info("=" * 60)
