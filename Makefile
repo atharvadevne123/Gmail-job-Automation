@@ -1,9 +1,14 @@
-.PHONY: install test cover lint fix type-check count clean all release
+.PHONY: install dev-install test cover lint fix type-check count clean all check release
 
 all: lint test
 
 install:
 	pip install -r requirements.txt
+
+dev-install:
+	pip install -e ".[dev]"
+
+check: lint type-check test
 
 test:
 	python -m pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
