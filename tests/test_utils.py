@@ -1,10 +1,9 @@
 """Tests for utils module."""
-import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from utils import build_query, chunked, format_count, retry, sanitize_query
+from utils import build_query, chunked, format_count, format_duration, retry, sanitize_query
 
 
 def test_build_query_single():
@@ -132,3 +131,20 @@ def test_retry_does_not_catch_unlisted_exception():
     with pytest.raises(TypeError):
         decorated()
     fn.assert_called_once()
+
+
+@pytest.mark.parametrize("seconds,expected", [
+    (0, "0.0s"),
+    (0.5, "0.5s"),
+    (59.9, "59.9s"),
+    (60, "1m 00s"),
+    (90, "1m 30s"),
+    (3600, "1h 00m 00s"),
+    (3661, "1h 01m 01s"),
+])
+def test_format_duration(seconds, expected):
+    assert format_duration(seconds) == expected
+
+
+def test_format_duration_negative_treated_as_zero():
+    assert format_duration(-5) == "0.0s"
