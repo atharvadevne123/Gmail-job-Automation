@@ -13,7 +13,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-__all__ = ["get_gmail_service", "with_retry"]
+__all__ = ["get_gmail_service", "with_retry", "is_authenticated"]
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
@@ -25,6 +25,18 @@ TOKEN_PATH = os.environ.get("GMAIL_TOKEN_PATH", os.path.join(BASE_DIR, "token.pi
 CREDENTIALS_PATH = os.environ.get(
     "GMAIL_CREDENTIALS_PATH", os.path.join(BASE_DIR, "credentials.json")
 )
+
+
+def is_authenticated() -> bool:
+    """Return True if a valid, non-expired token exists on disk."""
+    if not os.path.exists(TOKEN_PATH):
+        return False
+    try:
+        with open(TOKEN_PATH, "rb") as f:
+            creds = pickle.load(f)
+        return bool(creds and creds.valid)
+    except Exception:
+        return False
 
 
 def get_gmail_service() -> Any:
