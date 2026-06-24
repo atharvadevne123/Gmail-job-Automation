@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+import sys
 
 from auth import get_gmail_service
 from utils import format_count
 
-__all__ = ["count_label", "main"]
+__all__ = ["count_label", "count_all", "main"]
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -29,16 +31,27 @@ def count_label(service: object, label_name: str) -> int:
     return int(info.get("threadsTotal", 0))
 
 
+def count_all(service: object, labels: list[str]) -> dict[str, int]:
+    """Return a mapping of label name -> thread count."""
+    return {name: count_label(service, name) for name in labels}
+
+
 def main() -> None:
     """Count threads in job-related Gmail labels."""
     parser = argparse.ArgumentParser(description="Count emails in job labels")
     parser.add_argument("--label", help="Specific label to count (default: all)")
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
     args = parser.parse_args()
     service = get_gmail_service()
     targets = [args.label] if args.label else LABELS_TO_COUNT
-    for name in targets:
-        n = count_label(service, name)
-        print(format_count(n, "thread"), f"in {name!r}")
+    counts = count_all(service, targets)
+
+    if args.json:
+        json.dump(counts, sys.stdout, indent=2)
+        print()
+    else:
+        for name, n in counts.items():
+            print(format_count(n, "thread"), f"in {name!r}")
 
 
 if __name__ == "__main__":
