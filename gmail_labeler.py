@@ -1,13 +1,4 @@
-# ============================================================
-#  Gmail Job Labeler — runs on your computer, NO time limits
-#  Labels ALL rejection + application emails in one go
-#
-#  SETUP (one time):
-#  1. pip install -r requirements.txt
-#  2. Get credentials.json from Google Cloud Console (see README below)
-#  3. Run: python gmail_labeler.py
-# ============================================================
-
+"""Label job-search emails in Gmail as rejections or applications."""
 import argparse
 import logging
 import time
@@ -15,9 +6,12 @@ from typing import Any, Optional
 
 from auth import get_gmail_service, with_retry
 
+__all__ = ["get_or_create_label", "label_threads", "main", "LABELS"]
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
-LABELS = {
+LABELS: dict[str, list[str]] = {
     "Job Applications Applied": [
         'subject:"thank you for applying"',
         'subject:"thanks for applying"',
@@ -82,68 +76,85 @@ LABELS = {
         '"have decided not to"',
         '"unable to offer you"',
         '"not be able to offer"',
-    ]
+    ],
 }
 
-BATCH_SIZE = 100  # Google Batch API limit per HTTP request
+BATCH_SIZE = 100
 
 
-def get_or_create_label(service: Any, name: str, existing_labels: list, dry_run: bool = False) -> str:
+def get_or_create_label(
+    service: Any, name: str, existing_labels: list, dry_run: bool = False
+) -> str:
+    """Return label ID, creating the label if it does not exist."""
     for label in existing_labels:
-        if label['name'] == name:
-            logger.info("  ✓ Found existing label: '%s'", name)
-            return label['id']
+        if label["name"] == name:
+            logger.info("  Found existing label: %r", name)
+            return label["id"]
 
     if dry_run:
-        logger.info("  [dry-run] Would create label: '%s'", name)
+        logger.info("  [dry-run] Would create label: %r", name)
         return f"dry_run_{name}"
 
-    label = with_retry(lambda: service.users().labels().create(
-        userId='me',
-        body={'name': name, 'labelListVisibility': 'labelShow', 'messageListVisibility': 'show'}
-    ).execute())
-    logger.info("  ✓ Created new label: '%s'", name)
-    return label['id']
+    label = with_retry(
+        lambda: service.users()
+        .labels()
+        .create(
+            userId="me",
+            body={
+                "name": name,
+                "labelListVisibility": "labelShow",
+                "messageListVisibility": "show",
+            },
+        )
+        .execute()
+    )
+    logger.info("  Created new label: %r", name)
+    return label["id"]
 
 
-def label_threads(service: Any, label_name: str, label_id: str, queries: list, dry_run: bool = False) -> int:
-    query = ' OR '.join(queries)
-    logger.info("\n🔍 Searching for: '%s'", label_name)
-    logger.info("   Query has %d keyword patterns\n", len(queries))
+def label_threads(
+    service: Any,
+    label_name: str,
+    label_id: str,
+    queries: list[str],
+    dry_run: bool = False,
+) -> int:
+    """Search for and label matching threads. Returns count labeled."""
+    query = " OR ".join(queries)
+    logger.info("Searching for %r (%d patterns)", label_name, len(queries))
 
-    page_token = None
+    page_token: Optional[str] = None
     page = 0
     total = 0
 
     while True:
         page += 1
-        params = {'userId': 'me', 'q': query, 'maxResults': 500}
+        params: dict[str, Any] = {"userId": "me", "q": query, "maxResults": 500}
         if page_token:
-            params['pageToken'] = page_token
+            params["pageToken"] = page_token
 
         response = with_retry(lambda p=params: service.users().threads().list(**p).execute())
-        threads = response.get('threads', [])
+        threads = response.get("threads", [])
 
         if not threads:
             break
 
         action = "would label" if dry_run else "labeling & archiving"
-        logger.info("  Page %d: found %d threads — %s...", page, len(threads), action)
+        logger.info("  Page %d: %d threads — %s...", page, len(threads), action)
 
-        thread_ids = [t['id'] for t in threads]
+        thread_ids = [t["id"] for t in threads]
 
         if dry_run:
             total += len(thread_ids)
-            logger.info("    [dry-run] %d total would be labeled so far...", total)
-            page_token = response.get('nextPageToken')
+            page_token = response.get("nextPageToken")
             if not page_token:
                 break
             time.sleep(0.3)
             continue
 
         for i in range(0, len(thread_ids), BATCH_SIZE):
-            chunk = thread_ids[i:i + BATCH_SIZE]
-            errors = []
+            chunk = thread_ids[i : i + BATCH_SIZE]
+            errors: list[Exception] = []
 
             def _cb(req_id: str, response: Any, exception: Optional[Exception]) -> None:
                 if exception:
@@ -151,54 +162,53 @@ def label_threads(service: Any, label_name: str, label_id: str, queries: list, d
 
             batch = service.new_batch_http_request(callback=_cb)
             for tid in chunk:
-                batch.add(service.users().threads().modify(
-                    userId='me',
-                    id=tid,
-                    body={'addLabelIds': [label_id], 'removeLabelIds': ['INBOX']}
-                ))
+                batch.add(
+                    service.users()
+                    .threads()
+                    .modify(
+                        userId="me",
+                        id=tid,
+                        body={"addLabelIds": [label_id], "removeLabelIds": ["INBOX"]},
+                    )
+                )
             with_retry(batch.execute)
 
             total += len(chunk) - len(errors)
             if errors:
-                logger.warning("    ⚠️  %d threads failed in this batch", len(errors))
-            logger.info("    ✓ %d total labeled & moved out of inbox so far...", total)
+                logger.warning("  %d threads failed in batch", len(errors))
+            logger.info("  %d total labeled so far...", total)
             time.sleep(0.2)
 
-        page_token = response.get('nextPageToken')
+        page_token = response.get("nextPageToken")
         if not page_token:
             break
-
         time.sleep(0.3)
 
-    logger.info("\n  ✅ '%s' — DONE! Total: %d emails labeled.\n", label_name, total)
+    logger.info("%r — DONE! Total: %d labeled.", label_name, total)
     return total
 
 
 def main() -> None:
+    """Entry point for the Gmail job labeler."""
     parser = argparse.ArgumentParser(description="Label job-search emails in Gmail.")
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Preview how many emails would be labeled without making any changes.",
+        help="Preview how many emails would be labeled without making changes.",
     )
     args = parser.parse_args()
     dry_run: bool = args.dry_run
 
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     logger.info("=" * 60)
-    if dry_run:
-        logger.info("  Gmail Job Labeler — DRY RUN (no changes will be made)")
-    else:
-        logger.info("  Gmail Job Labeler — No Time Limits!")
+    mode = "DRY RUN" if dry_run else "Live"
+    logger.info("  Gmail Job Labeler — %s", mode)
     logger.info("=" * 60)
 
-    logger.info("\n🔐 Authenticating with Gmail...")
     service = get_gmail_service()
-    logger.info("  ✓ Authenticated!\n")
-
     existing_labels = with_retry(
-        lambda: service.users().labels().list(userId='me').execute()
-    ).get('labels', [])
+        lambda: service.users().labels().list(userId="me").execute()
+    ).get("labels", [])
 
     grand_total = 0
     for label_name, queries in LABELS.items():
@@ -208,11 +218,11 @@ def main() -> None:
 
     logger.info("=" * 60)
     if dry_run:
-        logger.info("  [dry-run] Would label %d emails total. Run without --dry-run to apply.", grand_total)
+        logger.info("  [dry-run] Would label %d emails total.", grand_total)
     else:
-        logger.info("  🎉 ALL DONE! Grand total: %d emails labeled.", grand_total)
+        logger.info("  ALL DONE! Grand total: %d emails labeled.", grand_total)
     logger.info("=" * 60)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
