@@ -1,4 +1,12 @@
-"""Gmail authentication and retry utilities."""
+"""Gmail authentication and retry utilities.
+
+Usage::
+
+    from auth import get_gmail_service, with_retry
+
+    service = get_gmail_service()
+    result = with_retry(lambda: service.users().labels().list(userId="me").execute())
+"""
 from __future__ import annotations
 
 import logging
@@ -18,6 +26,7 @@ __all__ = ["get_gmail_service", "with_retry", "is_authenticated"]
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
+# gmail.modify allows reading, labeling, and moving but not permanently deleting.
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +49,12 @@ def is_authenticated() -> bool:
 
 
 def get_gmail_service() -> Any:
-    """Authenticate and return an authorized Gmail API service object."""
+    """Authenticate and return an authorized Gmail API service object.
+
+    On first run, opens a browser for OAuth consent. On subsequent runs,
+    loads the cached token from TOKEN_PATH. Refreshes expired tokens
+    automatically. Raises FileNotFoundError if credentials.json is missing.
+    """
     creds = None
     if os.path.exists(TOKEN_PATH):
         with open(TOKEN_PATH, "rb") as f:
@@ -73,7 +87,12 @@ _TRANSIENT_NETWORK_ERRORS = (OSError, ConnectionError, TimeoutError)
 
 
 def with_retry(fn: Callable[[], Any], max_retries: int = 5) -> Any:
-    """Call fn() with exponential backoff on transient API and network errors."""
+    """Call fn() with exponential backoff on transient errors.
+
+    Retries on HTTP 429 (rate limit), 500, 503, and transient network errors
+    (OSError, ConnectionError, TimeoutError). Raises immediately on all
+    other HTTP errors (e.g. 401, 403, 404).
+    """
     for attempt in range(max_retries):
         try:
             return fn()
