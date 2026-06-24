@@ -11,6 +11,16 @@ requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [{name = "atharvadevne123", email = "devneatharva@gmail.com"}]
 
+[project.urls]
+Homepage = "https://github.com/atharvadevne123/Gmail-job-Automation"
+Issues = "https://github.com/atharvadevne123/Gmail-job-Automation/issues"
+
+[project.scripts]
+count-emails = "count_emails:main"
+label-jobs = "gmail_labeler:main"
+label-interviews = "label_interviews:main"
+delete-job-emails = "delete_job_emails:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
 
@@ -21,10 +31,23 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "strict"
+addopts = "-v --tb=short"
 
 [tool.coverage.run]
 source = ["."]
-omit = ["tests/*", "setup.py"]
+omit = ["tests/*", "setup.py", ".venv/*"]
 
 [tool.coverage.report]
-exclude_lines = ["if __name__ == .__main__.:"]
+exclude_lines = [
+    "if __name__ == .__main__.:",
+    "pragma: no cover",
+    "raise NotImplementedError",
+]
+show_missing = true
+fail_under = 70
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
