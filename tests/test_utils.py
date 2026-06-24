@@ -1,7 +1,10 @@
 """Tests for utils module."""
+import time
+from unittest.mock import MagicMock, patch
+
 import pytest
 
-from utils import build_query, chunked, format_count
+from utils import build_query, chunked, format_count, retry, sanitize_query
 
 
 def test_build_query_single():
@@ -25,8 +28,7 @@ def test_build_query_wraps_spaced_terms():
 
 
 def test_build_query_mixed_spacing():
-    result = build_query(["foo", "bar baz"])
-    assert result == "foo OR (bar baz)"
+    assert build_query(["foo", "bar baz"]) == "foo OR (bar baz)"
 
 
 def test_chunked_even_split():
@@ -72,3 +74,61 @@ def test_format_count_zero_uses_plural():
 ])
 def test_format_count_parametrize(n, expected):
     assert format_count(n, "email") == expected
+
+
+def test_sanitize_query_trims_whitespace():
+    assert sanitize_query("  hello  ") == "hello"
+
+
+def test_sanitize_query_collapses_spaces():
+    assert sanitize_query("a  b   c") == "a b c"
+
+
+def test_sanitize_query_no_change_on_clean():
+    assert sanitize_query("a OR b") == "a OR b"
+
+
+def test_retry_succeeds_on_first_attempt():
+    fn = MagicMock(return_value=42)
+
+    @retry(max_retries=3, delay=0.0)
+    def decorated():
+        return fn()
+
+    assert decorated() == 42
+    fn.assert_called_once()
+
+
+def test_retry_retries_on_exception():
+    fn = MagicMock(side_effect=[ValueError("err"), 99])
+
+    @retry(max_retries=3, delay=0.0, exceptions=(ValueError,))
+    def decorated():
+        return fn()
+
+    assert decorated() == 99
+    assert fn.call_count == 2
+
+
+def test_retry_raises_after_max():
+    fn = MagicMock(side_effect=ValueError("always"))
+
+    @retry(max_retries=2, delay=0.0, exceptions=(ValueError,))
+    def decorated():
+        return fn()
+
+    with pytest.raises(ValueError):
+        decorated()
+    assert fn.call_count == 2
+
+
+def test_retry_does_not_catch_unlisted_exception():
+    fn = MagicMock(side_effect=TypeError("type error"))
+
+    @retry(max_retries=3, delay=0.0, exceptions=(ValueError,))
+    def decorated():
+        return fn()
+
+    with pytest.raises(TypeError):
+        decorated()
+    fn.assert_called_once()
