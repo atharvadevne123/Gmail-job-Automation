@@ -1,4 +1,4 @@
-.PHONY: install test cover lint fix type-check count clean all
+.PHONY: install test cover lint fix type-check count clean all release
 
 all: lint test
 
@@ -23,6 +23,10 @@ type-check:
 
 count:
 	python count_emails.py
+
+release: lint test
+	git tag -a v$$(python -c "import importlib.metadata; print(importlib.metadata.version('gmail-job-automation'))") -m "Release"
+	@echo "Tag created. Push with: git push --tags"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
