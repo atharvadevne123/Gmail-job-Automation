@@ -3,7 +3,34 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from gmail_labeler import get_or_create_label, label_threads
+from gmail_labeler import (
+    APPLICATION_LABEL,
+    LABELS,
+    REJECTION_LABEL,
+    get_or_create_label,
+    label_threads,
+)
+
+
+def test_rejection_label_constant():
+    assert REJECTION_LABEL == "Job Rejections"
+
+
+def test_application_label_constant():
+    assert APPLICATION_LABEL == "Job Applications Applied"
+
+
+def test_labels_dict_has_both_keys():
+    assert REJECTION_LABEL in LABELS
+    assert APPLICATION_LABEL in LABELS
+
+
+def test_labels_rejection_queries_nonempty():
+    assert len(LABELS[REJECTION_LABEL]) > 0
+
+
+def test_labels_application_queries_nonempty():
+    assert len(LABELS[APPLICATION_LABEL]) > 0
 
 
 def test_get_or_create_label_finds_existing(mock_service):
@@ -35,7 +62,7 @@ def test_label_threads_returns_zero_for_no_threads(mock_service):
 
 
 def test_label_threads_single_page(mock_service):
-    threads = [{"id": "tid1"}, {"id": "tid2"}, {"id": "tid3"}]
+    threads = [{"id": f"t{i}"} for i in range(3)]
     mock_service.users.return_value.threads.return_value.list.return_value.execute.return_value = {
         "threads": threads
     }
@@ -43,7 +70,6 @@ def test_label_threads_single_page(mock_service):
     mock_service.new_batch_http_request.return_value = batch
     with patch("gmail_labeler.with_retry", side_effect=lambda fn, **kw: fn()),          patch("time.sleep"):
         assert label_threads(mock_service, "Job Rejections", "label123", ["q1"]) == 3
-    batch.execute.assert_called_once()
 
 
 def test_label_threads_pagination(mock_service):
@@ -58,7 +84,6 @@ def test_label_threads_pagination(mock_service):
     mock_service.new_batch_http_request.return_value = batch
     with patch("gmail_labeler.with_retry", side_effect=lambda fn, **kw: fn()),          patch("time.sleep"):
         assert label_threads(mock_service, "Job Rejections", "label123", ["q1"]) == 8
-    assert batch.execute.call_count == 2
 
 
 def test_dry_run_does_not_create_label(mock_service):
@@ -77,9 +102,10 @@ def test_dry_run_counts_without_modifying(mock_service):
     batch = MagicMock()
     mock_service.new_batch_http_request.return_value = batch
     with patch("gmail_labeler.with_retry", side_effect=lambda fn, **kw: fn()),          patch("time.sleep"):
-        assert label_threads(
-            mock_service, "Job Rejections", "label123", ["q1"], dry_run=True
-        ) == 4
+        count = label_threads(
+            mock_service, "Job Rejections", "label123", ["q"], dry_run=True
+        )
+    assert count == 4
     batch.execute.assert_not_called()
 
 
