@@ -104,12 +104,19 @@ def main() -> None:
     """Entry point for moving job emails to Trash."""
     parser = argparse.ArgumentParser(description="Move job emails to Gmail Trash.")
     parser.add_argument("--dry-run", action="store_true", help="Preview without changes.")
+    parser.add_argument(
+        "--labels",
+        nargs="+",
+        default=LABELS_TO_TRASH,
+        metavar="LABEL",
+        help="Labels to empty (default: %(default)s)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     logger.info("=" * 60)
     logger.info("  Gmail Job Emails — Move to Trash")
-    for label in LABELS_TO_TRASH:
+    for label in args.labels:
         logger.info("    - %s", label)
     logger.info("=" * 60)
 
@@ -123,7 +130,7 @@ def main() -> None:
     service = get_gmail_service()
 
     summary: dict[str, int] = {}
-    for label_name in LABELS_TO_TRASH:
+    for label_name in args.labels:
         label_id = get_label_id(service, label_name)
         if not label_id:
             logger.warning("  Label %r not found — skipping.", label_name)
