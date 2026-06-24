@@ -11,8 +11,11 @@ __all__ = ["get_or_create_label", "label_threads", "main", "LABELS"]
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 logger = logging.getLogger(__name__)
 
+REJECTION_LABEL = "Job Rejections"
+APPLICATION_LABEL = "Job Applications Applied"
+
 LABELS: dict[str, list[str]] = {
-    "Job Applications Applied": [
+    APPLICATION_LABEL: [
         'subject:"thank you for applying"',
         'subject:"thanks for applying"',
         'subject:"thank you for your application"',
@@ -40,7 +43,7 @@ LABELS: dict[str, list[str]] = {
         '"team will reach out to discuss next steps"',
         '"recruiting team will contact you"',
     ],
-    "Job Rejections": [
+    REJECTION_LABEL: [
         '"not be moving forward"',
         '"not moving forward"',
         '"will not be moving"',
