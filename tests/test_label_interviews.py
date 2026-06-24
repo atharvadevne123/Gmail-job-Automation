@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from label_interviews import get_or_create_label, label_interview_threads
+from label_interviews import INTERVIEW_QUERIES, get_or_create_label, label_interview_threads
 
 
 class TestGetOrCreateLabel:
@@ -29,8 +29,7 @@ class TestGetOrCreateLabel:
             "id": "new_id",
             "name": "Job Interviews",
         }
-        result = get_or_create_label(mock_service, "Job Interviews")
-        assert result == "new_id"
+        assert get_or_create_label(mock_service, "Job Interviews") == "new_id"
 
 
 class TestLabelInterviewThreads:
@@ -47,8 +46,7 @@ class TestLabelInterviewThreads:
         batch = MagicMock()
         mock_service.new_batch_http_request.return_value = batch
         with patch("label_interviews.time.sleep"):
-            count = label_interview_threads(mock_service, "label_int")
-        assert count == 6
+            assert label_interview_threads(mock_service, "label_int") == 6
         assert batch.execute.called
 
     def test_dry_run_returns_count_without_modifying(self, mock_service):
@@ -59,8 +57,7 @@ class TestLabelInterviewThreads:
         batch = MagicMock()
         mock_service.new_batch_http_request.return_value = batch
         with patch("label_interviews.time.sleep"):
-            count = label_interview_threads(mock_service, "label_int", dry_run=True)
-        assert count == 3
+            assert label_interview_threads(mock_service, "label_int", dry_run=True) == 3
         batch.execute.assert_not_called()
 
     def test_pagination_sums_all_pages(self, mock_service):
@@ -73,5 +70,24 @@ class TestLabelInterviewThreads:
         batch = MagicMock()
         mock_service.new_batch_http_request.return_value = batch
         with patch("label_interviews.time.sleep"):
-            count = label_interview_threads(mock_service, "label_int")
-        assert count == 7
+            assert label_interview_threads(mock_service, "label_int") == 7
+
+
+class TestInterviewQueries:
+    def test_has_minimum_query_count(self):
+        assert len(INTERVIEW_QUERIES) >= 19
+
+    def test_all_queries_are_strings(self):
+        assert all(isinstance(q, str) for q in INTERVIEW_QUERIES)
+
+    def test_queries_are_unique(self):
+        assert len(INTERVIEW_QUERIES) == len(set(INTERVIEW_QUERIES))
+
+    @pytest.mark.parametrize("keyword", [
+        "interview",
+        "phone screen",
+        "coding challenge",
+    ])
+    def test_key_patterns_present(self, keyword):
+        combined = " ".join(INTERVIEW_QUERIES)
+        assert keyword in combined
