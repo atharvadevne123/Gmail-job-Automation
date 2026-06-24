@@ -81,15 +81,32 @@ def multi_page_threads():
 @pytest.fixture
 def batch_with_errors(mock_service):
     """Batch mock that reports one error per execute call."""
-    from unittest.mock import call
-
     batch = MagicMock()
 
     def execute_with_error():
-        cb = mock_service.new_batch_http_request.call_args[1].get("callback")
-        if cb:
+        cb_kwargs = mock_service.new_batch_http_request.call_args
+        if cb_kwargs and cb_kwargs[1].get("callback"):
+            cb = cb_kwargs[1]["callback"]
             cb("req_0", None, Exception("batch error"))
 
     batch.execute.side_effect = execute_with_error
     mock_service.new_batch_http_request.return_value = batch
     return mock_service
+
+
+@pytest.fixture
+def label_data():
+    """Standard label ID mapping for tests."""
+    return {
+        "Job Rejections": "label_rej",
+        "Job Applications Applied": "label_app",
+        "Job Interviews": "label_int",
+    }
+
+
+@pytest.fixture
+def thread_list():
+    """Factory for creating lists of thread dicts."""
+    def _make(count: int, offset: int = 0) -> list[dict]:
+        return [{"id": f"thread_{offset + i}"} for i in range(count)]
+    return _make
