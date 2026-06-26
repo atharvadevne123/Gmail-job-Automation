@@ -123,20 +123,18 @@ def test_is_authenticated_false_when_no_token(tmp_path):
 
 
 def test_is_authenticated_true_when_valid_token(tmp_path):
-    token_path = tmp_path / "token.pickle"
     creds = MagicMock()
     creds.valid = True
-    import pickle
-    token_path.write_bytes(pickle.dumps(creds))
-    with patch("auth.TOKEN_PATH", str(token_path)):
+    with patch("auth.os.path.exists", return_value=True), \
+         patch("builtins.open", mock_open()), \
+         patch("auth.pickle.load", return_value=creds):
         assert is_authenticated() is True
 
 
 def test_is_authenticated_false_when_token_invalid(tmp_path):
-    token_path = tmp_path / "token.pickle"
     creds = MagicMock()
     creds.valid = False
-    import pickle
-    token_path.write_bytes(pickle.dumps(creds))
-    with patch("auth.TOKEN_PATH", str(token_path)):
+    with patch("auth.os.path.exists", return_value=True), \
+         patch("builtins.open", mock_open()), \
+         patch("auth.pickle.load", return_value=creds):
         assert is_authenticated() is False
