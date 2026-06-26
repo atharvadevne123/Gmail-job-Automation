@@ -121,8 +121,7 @@ def main() -> None:
     logger.info("=" * 60)
 
     if not args.dry_run:
-        confirm = input("
-  Type YES (uppercase) to confirm: ")
+        confirm = input("\n  Type YES (uppercase) to confirm: ")
         if confirm.strip().upper() != "YES":
             logger.info("  Cancelled.")
             return
