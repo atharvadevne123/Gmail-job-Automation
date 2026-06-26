@@ -64,7 +64,7 @@ def mock_service():
     service.users().threads().list().execute.return_value = {"threads": []}
     service.users().threads().modify().execute.return_value = {}
     service.users().threads().trash().execute.return_value = {}
-    service.users().labels().delete().execute.return_value = {}
+    service.users.return_value.labels.return_value.delete.return_value.execute.return_value = {}
     service.new_batch_http_request.return_value = MagicMock()
 
     return service
