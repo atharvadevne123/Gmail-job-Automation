@@ -5,4 +5,4 @@ google-api-python-client>=2.197.0
 # Dev / test
 pytest>=8.4.2
 pytest-cov>=7.1.0
-ruff>=0.15.18
+ruff>=0.15.20
