@@ -171,11 +171,16 @@ def label_threads(service: Any, label_name: str, label_id: str, queries: list, d
 
         for i in range(0, len(thread_ids), BATCH_SIZE):
             chunk = thread_ids[i:i + BATCH_SIZE]
-            errors = []
+            errors: list[Exception] = []
 
-            def _cb(req_id: str, response: Any, exception: Optional[Exception]) -> None:
+            def _cb(
+                req_id: str,
+                response: Any,
+                exception: Optional[Exception],
+                _errors: list = errors,
+            ) -> None:
                 if exception:
-                    errors.append(exception)
+                    _errors.append(exception)
 
             batch = service.new_batch_http_request(callback=_cb)
             for tid in chunk:

@@ -123,9 +123,14 @@ def label_interview_threads(service: Any, label_id: str, dry_run: bool = False) 
             chunk = thread_ids[i:i + BATCH_SIZE]
             errors: list[Exception] = []
 
-            def _cb(req_id: str, resp: Any, exception: Optional[Exception]) -> None:
+            def _cb(
+                req_id: str,
+                resp: Any,
+                exception: Optional[Exception],
+                _errors: list = errors,
+            ) -> None:
                 if exception:
-                    errors.append(exception)
+                    _errors.append(exception)
 
             batch = service.new_batch_http_request(callback=_cb)
             for tid in chunk:

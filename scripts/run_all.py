@@ -20,9 +20,13 @@ from auth import get_gmail_service, with_retry
 from gmail_labeler import LABELS, get_or_create_label, label_threads
 from label_interviews import (
     INTERVIEW_QUERIES,
-    LABEL_NAME as INTERVIEW_LABEL,
-    get_or_create_label as get_or_create_interview_label,
     label_interview_threads,
+)
+from label_interviews import (
+    LABEL_NAME as INTERVIEW_LABEL,
+)
+from label_interviews import (
+    get_or_create_label as get_or_create_interview_label,
 )
 
 logger = logging.getLogger(__name__)

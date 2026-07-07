@@ -75,11 +75,16 @@ def trash_all_in_label(service: Any, label_name: str, label_id: str) -> int:
         thread_ids = [t['id'] for t in threads]
         for i in range(0, len(thread_ids), BATCH_SIZE):
             chunk = thread_ids[i:i + BATCH_SIZE]
-            errors = []
+            errors: list[Exception] = []
 
-            def _cb(req_id: str, resp: Any, exception: Optional[Exception]) -> None:
+            def _cb(
+                req_id: str,
+                resp: Any,
+                exception: Optional[Exception],
+                _errors: list = errors,
+            ) -> None:
                 if exception:
-                    errors.append(exception)
+                    _errors.append(exception)
 
             batch = service.new_batch_http_request(callback=_cb)
             for tid in chunk:
