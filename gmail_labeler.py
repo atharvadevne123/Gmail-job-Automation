@@ -13,9 +13,11 @@ from typing import Any, Optional
 
 from auth import get_gmail_service, with_retry
 
+__all__ = ["get_or_create_label", "label_threads", "LABELS", "BATCH_SIZE"]
+
 logger = logging.getLogger(__name__)
 
-LABELS = {
+LABELS: dict[str, list[str]] = {
     "Job Applications Applied": [
         'subject:"thank you for applying"',
         'subject:"thanks for applying"',
