@@ -86,7 +86,12 @@ LABELS = {
 BATCH_SIZE = 100  # Google Batch API limit per HTTP request
 
 
-def get_or_create_label(service: Any, name: str, existing_labels: list, dry_run: bool = False) -> str:
+def get_or_create_label(
+    service: Any,
+    name: str,
+    existing_labels: list[dict],
+    dry_run: bool = False,
+) -> str:
     """Return the ID of a Gmail label, creating it if absent.
 
     Args:
@@ -117,7 +122,13 @@ def get_or_create_label(service: Any, name: str, existing_labels: list, dry_run:
     return label['id']
 
 
-def label_threads(service: Any, label_name: str, label_id: str, queries: list, dry_run: bool = False) -> int:
+def label_threads(
+    service: Any,
+    label_name: str,
+    label_id: str,
+    queries: list[str],
+    dry_run: bool = False,
+) -> int:
     """Search Gmail for threads matching any query pattern and apply a label.
 
     Paginates through all results (up to 500 threads per page), applies
