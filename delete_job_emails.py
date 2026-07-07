@@ -14,9 +14,9 @@ from auth import get_gmail_service, with_retry
 
 logger = logging.getLogger(__name__)
 
-LABELS_TO_TRASH = [
+LABELS_TO_TRASH: list[str] = [
     "Job Rejections",
-    "Job Applications Applied"
+    "Job Applications Applied",
 ]
 
 BATCH_SIZE = 100  # Google Batch API limit per HTTP request
