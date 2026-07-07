@@ -83,6 +83,43 @@ def test_with_retry_raises_network_error_after_max_retries():
     assert fn.call_count == 2
 
 
+@pytest.mark.parametrize("status_code", [429, 500, 503])
+def test_with_retry_retries_on_all_retryable_codes(status_code):
+    err = _http_error(status_code)
+    fn = MagicMock(side_effect=[err, "recovered"])
+    with patch("time.sleep"):
+        result = with_retry(fn, max_retries=3)
+    assert result == "recovered"
+    assert fn.call_count == 2
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 422])
+def test_with_retry_raises_immediately_on_non_retryable_codes(status_code):
+    err = _http_error(status_code)
+    fn = MagicMock(side_effect=err)
+    with pytest.raises(HttpError):
+        with_retry(fn, max_retries=5)
+    fn.assert_called_once()
+
+
+@pytest.mark.parametrize("exc_type", [OSError, ConnectionError, TimeoutError])
+def test_with_retry_handles_all_network_errors(exc_type):
+    fn = MagicMock(side_effect=[exc_type("transient"), "ok"])
+    with patch("time.sleep"):
+        result = with_retry(fn, max_retries=3)
+    assert result == "ok"
+    assert fn.call_count == 2
+
+
+def test_with_retry_uses_exponential_backoff():
+    err = _http_error(429)
+    fn = MagicMock(side_effect=[err, err, "ok"])
+    sleep_calls = []
+    with patch("time.sleep", side_effect=lambda s: sleep_calls.append(s)):
+        with_retry(fn, max_retries=5)
+    assert sleep_calls == [1, 2]
+
+
 # --- get_gmail_service tests ---
 
 def test_get_gmail_service_raises_when_credentials_missing(tmp_path):
@@ -106,3 +143,21 @@ def test_get_gmail_service_loads_valid_token(tmp_path):
         mock_build.return_value = MagicMock()
         get_gmail_service()
         assert mock_build.called
+
+
+def test_get_gmail_service_refreshes_expired_token(tmp_path):
+    from auth import get_gmail_service
+    creds = MagicMock()
+    creds.valid = False
+    creds.expired = True
+    creds.refresh_token = "tok"
+
+    with patch('auth.TOKEN_PATH', str(tmp_path / 'token.pickle')), \
+         patch('auth.os.path.exists', return_value=True), \
+         patch('builtins.open', mock_open()), \
+         patch('auth.pickle.load', return_value=creds), \
+         patch('auth.pickle.dump'), \
+         patch('auth.build') as mock_build:
+        mock_build.return_value = MagicMock()
+        get_gmail_service()
+        creds.refresh.assert_called_once()
