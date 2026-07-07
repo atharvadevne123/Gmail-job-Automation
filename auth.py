@@ -14,11 +14,15 @@ from googleapiclient.errors import HttpError
 
 logger = logging.getLogger(__name__)
 
-SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
+__all__ = ["get_gmail_service", "with_retry"]
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TOKEN_PATH = os.environ.get('GMAIL_TOKEN_PATH', os.path.join(BASE_DIR, 'token.pickle'))
-CREDENTIALS_PATH = os.environ.get('GMAIL_CREDENTIALS_PATH', os.path.join(BASE_DIR, 'credentials.json'))
+SCOPES: list[str] = ['https://www.googleapis.com/auth/gmail.modify']
+
+BASE_DIR: str = os.path.dirname(os.path.abspath(__file__))
+TOKEN_PATH: str = os.environ.get('GMAIL_TOKEN_PATH', os.path.join(BASE_DIR, 'token.pickle'))
+CREDENTIALS_PATH: str = os.environ.get(
+    'GMAIL_CREDENTIALS_PATH', os.path.join(BASE_DIR, 'credentials.json')
+)
 
 
 def get_gmail_service() -> Any:
