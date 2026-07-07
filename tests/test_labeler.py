@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from gmail_labeler import get_or_create_label, label_threads
 
 
@@ -23,6 +25,17 @@ def test_get_or_create_label_creates_new_when_missing(mock_service):
     with patch('gmail_labeler.with_retry', side_effect=lambda fn, **kw: fn()):
         label_id = get_or_create_label(mock_service, 'Job Applications Applied', existing)
     assert label_id == 'new_label_id'
+
+
+@pytest.mark.parametrize("label_name,expected_id", [
+    ("Job Rejections", "label_rej"),
+    ("Job Applications Applied", "label_app"),
+    ("Job Interviews", "label_int"),
+])
+def test_get_or_create_label_parametrized(mock_service, label_name, expected_id):
+    existing = [{'name': label_name, 'id': expected_id}]
+    label_id = get_or_create_label(mock_service, label_name, existing)
+    assert label_id == expected_id
 
 
 def test_label_threads_returns_zero_when_no_threads(mock_service):
@@ -95,3 +108,40 @@ def test_dry_run_counts_without_modifying(mock_service):
 
     assert count == 4
     mock_batch.execute.assert_not_called()
+
+
+def test_dry_run_pagination(mock_service):
+    page1 = [{'id': f'tid{i}'} for i in range(5)]
+    page2 = [{'id': f'tid{i}'} for i in range(5, 9)]
+    execute_mock = (
+        mock_service.users.return_value.threads.return_value.list.return_value.execute
+    )
+    execute_mock.side_effect = [
+        {'threads': page1, 'nextPageToken': 'page2'},
+        {'threads': page2},
+    ]
+    mock_batch = MagicMock()
+    mock_service.new_batch_http_request.return_value = mock_batch
+
+    with patch('gmail_labeler.with_retry', side_effect=lambda fn, **kw: fn()), \
+         patch('time.sleep'):
+        count = label_threads(mock_service, 'Job Rejections', 'label123', ['q1'], dry_run=True)
+
+    assert count == 9
+    mock_batch.execute.assert_not_called()
+
+
+def test_label_threads_large_batch(mock_service):
+    threads = [{'id': f'tid{i}'} for i in range(150)]
+    mock_service.users.return_value.threads.return_value.list.return_value.execute.return_value = {
+        'threads': threads
+    }
+    mock_batch = MagicMock()
+    mock_service.new_batch_http_request.return_value = mock_batch
+
+    with patch('gmail_labeler.with_retry', side_effect=lambda fn, **kw: fn()), \
+         patch('time.sleep'):
+        count = label_threads(mock_service, 'Job Rejections', 'label123', ['q1'])
+
+    assert count == 150
+    assert mock_batch.execute.call_count == 2  # 100 + 50
