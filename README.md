@@ -169,10 +169,16 @@ make type-check   # mypy static analysis
 **Makefile shortcuts:**
 
 ```bash
+make help          # list all targets
 make install       # pip install -r requirements.txt
 make test          # pytest with coverage report
+make test-fast     # stop on first failure
 make lint          # ruff check
 make fix           # ruff --fix
+make format        # ruff format
+make format-check  # check formatting only
+make type-check    # mypy static analysis
+make ci            # lint + test (same as CI)
 make run-all       # python scripts/run_all.py
 make run-all-dry   # python scripts/run_all.py --dry-run
 make clean         # remove __pycache__, .coverage, htmlcov/
