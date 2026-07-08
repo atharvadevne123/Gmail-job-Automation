@@ -1,0 +1,11 @@
+# Normalise line endings to LF in the repository
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.pickle binary
+
+# Exclude tooling/config noise from GitHub language stats
+.github/** linguist-vendored
+Makefile linguist-detectable=false
