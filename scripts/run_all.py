@@ -19,14 +19,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from auth import get_gmail_service, with_retry
 from gmail_labeler import LABELS, get_or_create_label, label_threads
 from label_interviews import (
-    INTERVIEW_QUERIES,
-    label_interview_threads,
-)
-from label_interviews import (
     LABEL_NAME as INTERVIEW_LABEL,
 )
 from label_interviews import (
     get_or_create_label as get_or_create_interview_label,
+)
+from label_interviews import (
+    label_interview_threads,
 )
 
 logger = logging.getLogger(__name__)

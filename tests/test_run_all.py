@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 def test_run_all_dry_run_returns_dict():
     from scripts.run_all import run_all
