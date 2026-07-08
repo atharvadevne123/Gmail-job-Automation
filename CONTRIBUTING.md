@@ -6,8 +6,8 @@ Thank you for your interest in contributing to Gmail Job Automation!
 
 1. Fork the repository and clone your fork.
 2. Create a virtual environment: `python -m venv .venv && source .venv/bin/activate`
-3. Install dependencies: `pip install -r requirements.txt`
-4. Install pre-commit hooks: `pip install pre-commit && pre-commit install`
+3. Install dependencies: `pip install -r requirements-dev.txt`
+4. Install pre-commit hooks: `pre-commit install`
 
 ## Making Changes
 

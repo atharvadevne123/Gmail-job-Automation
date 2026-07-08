@@ -18,7 +18,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Lint with ruff
         run: ruff check .
@@ -38,7 +38,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run tests with coverage
         run: python -m pytest tests/ -v --tb=short --cov=. --cov-report=term-missing --cov-report=xml
@@ -62,7 +62,7 @@ jobs:
           cache: 'pip'
 
       - name: Install mypy and stubs
-        run: pip install mypy -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Type check
         run: mypy auth.py gmail_labeler.py label_interviews.py delete_job_emails.py utils.py --ignore-missing-imports --no-error-summary

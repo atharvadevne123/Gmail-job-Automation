@@ -1,11 +1,14 @@
 .DEFAULT_GOAL := help
-.PHONY: help install test test-fast lint fix format format-check type-check ci clean run-all run-all-dry
+.PHONY: help install install-dev test test-fast lint fix format format-check type-check ci clean run-all run-all-dry
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 install:  ## Install runtime dependencies
 	pip install -r requirements.txt
+
+install-dev:  ## Install runtime + dev/test dependencies
+	pip install -r requirements-dev.txt
 
 test:  ## Run the full test suite with coverage
 	python -m pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
