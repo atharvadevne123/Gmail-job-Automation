@@ -14,7 +14,7 @@ from googleapiclient.errors import HttpError
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["get_gmail_service", "with_retry"]
+__all__ = ["get_gmail_service", "with_retry", "is_authenticated"]
 
 SCOPES: list[str] = ['https://www.googleapis.com/auth/gmail.modify']
 
@@ -23,6 +23,18 @@ TOKEN_PATH: str = os.environ.get('GMAIL_TOKEN_PATH', os.path.join(BASE_DIR, 'tok
 CREDENTIALS_PATH: str = os.environ.get(
     'GMAIL_CREDENTIALS_PATH', os.path.join(BASE_DIR, 'credentials.json')
 )
+
+
+def is_authenticated() -> bool:
+    """Return ``True`` if a valid, non-expired token exists on disk."""
+    if not os.path.exists(TOKEN_PATH):
+        return False
+    try:
+        with open(TOKEN_PATH, "rb") as f:
+            creds = pickle.load(f)
+        return bool(creds and creds.valid)
+    except Exception:
+        return False
 
 
 def get_gmail_service() -> Any:

@@ -18,6 +18,7 @@ A Python toolkit that automatically organises your job-search emails in Gmail �
 - **`--dry-run` mode** — preview match counts without modifying anything (all three scripts)
 - **`--log-level`** — control verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
 - **`scripts/run_all.py`** — authenticate once and run all three labelers in sequence
+- **`count_emails.py`** — read-only thread counts per label, with `--json` / `--csv` output
 - **Exponential backoff** — automatic retry on transient API errors (429, 500, 503)
 - **Batch API** — 100 threads per HTTP request for maximum throughput
 
@@ -67,6 +68,7 @@ python scripts/run_all.py --dry-run
 python gmail_labeler.py          # labels rejections + applications
 python label_interviews.py       # labels interview invitations
 python delete_job_emails.py      # moves labeled emails to Trash
+python count_emails.py           # read-only counts (--json / --csv)
 ```
 
 ### Run all labelers in one pass
@@ -135,6 +137,7 @@ Gmail API
     │
     ├── auth.py              OAuth2 flow + token caching + with_retry()
     │
+    ├── count_emails.py      Read-only thread counts  (--json / --csv)
     ├── gmail_labeler.py     Rejections + Applications (--dry-run support)
     ├── label_interviews.py  Interview invitations   (--dry-run support)
     ├── delete_job_emails.py Trash labeled emails    (--yes for CI)
@@ -164,7 +167,8 @@ make type-check   # mypy static analysis
 | `tests/test_label_interviews.py` | dry-run parity, pagination, parametrized |
 | `tests/test_main_flows.py` | end-to-end main() smoke tests |
 | `tests/test_run_all.py` | orchestration, label completeness |
-| `tests/test_utils.py` | format_count(), plural_s() |
+| `tests/test_utils.py` | format_count(), plural_s(), build_query(), chunked(), retry() |
+| `tests/test_count.py` | count_label(), count_all(), CSV/JSON export |
 
 **Makefile shortcuts:**
 

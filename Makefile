@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install install-dev test test-fast lint fix format format-check type-check ci clean run-all run-all-dry
+.PHONY: help install install-dev test test-fast lint fix format format-check type-check ci clean count cover run-all run-all-dry
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -32,6 +32,13 @@ type-check:  ## Run mypy static analysis
 	python -m mypy auth.py gmail_labeler.py label_interviews.py delete_job_emails.py utils.py --ignore-missing-imports
 
 ci: lint test  ## Run everything CI runs (lint + tests)
+
+count:  ## Count threads in job labels (read-only)
+	python count_emails.py
+
+cover:  ## HTML coverage report (htmlcov/index.html)
+	python -m pytest tests/ --cov=. --cov-report=html
+	@echo "Coverage report: htmlcov/index.html"
 
 run-all:  ## Run all three labelers with one auth
 	python scripts/run_all.py

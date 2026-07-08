@@ -11,6 +11,19 @@ requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [{name = "atharvadevne123", email = "devneatharva@gmail.com"}]
 
+[project.urls]
+Homepage = "https://github.com/atharvadevne123/Gmail-job-Automation"
+Issues = "https://github.com/atharvadevne123/Gmail-job-Automation/issues"
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff", "mypy", "pre-commit"]
+
+[project.scripts]
+label-jobs = "gmail_labeler:main"
+label-interviews = "label_interviews:main"
+delete-job-emails = "delete_job_emails:main"
+count-emails = "count_emails:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
 

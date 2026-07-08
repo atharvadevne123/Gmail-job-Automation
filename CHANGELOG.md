@@ -23,6 +23,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Repo hygiene: `.editorconfig`, `.gitattributes`, PR template, issue templates,
   `CODE_OF_CONDUCT.md`
 - README rewritten with Features, Quick Start, CLI reference, and architecture diagram
+- Merged upstream: `count_emails.py` (read-only counts with `--json`/`--csv`),
+  `is_authenticated()` in `auth.py`, extra `utils` helpers (`build_query`, `chunked`,
+  `format_duration`, `sanitize_query`, `truncate`, `retry`), `py.typed` marker,
+  release workflow
 
 ### Fixed
 - Unused imports in `scripts/run_all.py` and `tests/test_run_all.py`
