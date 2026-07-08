@@ -12,9 +12,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Google-style docstrings on all public functions and module docstrings
 - `.pre-commit-config.yaml` with ruff and pre-commit-hooks
 - `CONTRIBUTING.md` with setup, testing, and PR guidelines
-- `[tool.ruff]` configuration section in `pyproject.toml`
+- `[tool.ruff]` and `[tool.mypy]` configuration sections in `pyproject.toml`
+- `scripts/run_all.py` — run all three labelers with a single authentication
+- `utils.py` with `format_count()` and `plural_s()` helpers, used in all summaries
+- Test suite expanded from 27 to 95 tests (parametrized retry codes, pagination,
+  dry-run parity, main() flows, query-list integrity)
+- `typing.Final` annotations on module constants
+- Makefile: `help` (default), `test-fast`, `format`, `format-check`, `type-check`, `ci`,
+  `run-all`, `run-all-dry` targets
+- Repo hygiene: `.editorconfig`, `.gitattributes`, PR template, issue templates,
+  `CODE_OF_CONDUCT.md`
+- README rewritten with Features, Quick Start, CLI reference, and architecture diagram
 
 ### Fixed
+- Unused imports in `scripts/run_all.py` and `tests/test_run_all.py`
+- Loop-variable capture (ruff B023) in batch callbacks across all three scripts
 - Pinned GitHub Actions to stable versions (`actions/checkout@v4`, `actions/setup-python@v5`)
 - Type annotations added to `_cb` callbacks in `delete_job_emails.py`
 
