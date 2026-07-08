@@ -1,171 +1,199 @@
-# 📬 Gmail Job Search Automation
+# Gmail Job Search Automation
 
 ![CI](https://github.com/atharvadevne123/Gmail-job-Automation/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 **By [Atharva Devne](https://github.com/atharvadevne123)**
 
-A collection of scripts to automatically organize your job search emails in Gmail — labels rejections, applications, and interviews, and moves them out of your inbox. Built to handle 14,000+ emails with no manual work.
+A Python toolkit that automatically organises your job-search emails in Gmail — labelling rejections, application confirmations, and interview invitations, then archiving them out of your inbox. Built to handle 14,000+ emails with no time limits.
 
 ---
 
-## 📁 Files Overview
+## Features
 
-| File | Type | Description |
-|------|------|-------------|
-| `gmail_labeler.py` | Python | **Main script** — labels both rejections & applications. No time limit. Run on your computer. |
-| `label_interviews.py` | Python | Labels all interview invitation emails into "Job Interviews" |
-| `delete_job_emails.py` | Python | Moves all emails in Job Rejections & Job Applications Applied labels to Trash |
-| `.env.example` | Config | Template for `GMAIL_CREDENTIALS_PATH` and `GMAIL_TOKEN_PATH` env vars |
-| `requirements.txt` | Config | All dependencies including pytest, pytest-cov, and ruff |
-| `Makefile` | Config | Shortcuts: `make test`, `make lint`, `make fix`, `make clean` |
-
----
-
-## 🏷️ Labels Created
-
-- **Job Rejections** — emails where you were not selected
-- **Job Applications Applied** — confirmation emails when you applied
-- **Job Interviews** — emails inviting you to interview or asking screening questions
+- **Label rejections** — detects 34 rejection phrases and applies "Job Rejections"
+- **Label applications** — detects 25 confirmation phrases and applies "Job Applications Applied"
+- **Label interviews** — detects 19 invitation patterns and applies "Job Interviews"
+- **`--dry-run` mode** — preview match counts without modifying anything (all three scripts)
+- **`--log-level`** — control verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- **`scripts/run_all.py`** — authenticate once and run all three labelers in sequence
+- **Exponential backoff** — automatic retry on transient API errors (429, 500, 503)
+- **Batch API** — 100 threads per HTTP request for maximum throughput
 
 ---
 
-## 🐍 Python Scripts (Recommended — No Time Limits)
+## Quick Start
 
-### Setup (One Time)
+### 1. Install dependencies
 
-**1. Install dependencies**
 ```bash
-pip3 install google-auth google-auth-oauthlib google-api-python-client
+pip install -r requirements.txt
+# or
+make install
 ```
 
-**2. Get credentials.json from Google Cloud**
+### 2. Get credentials from Google Cloud
+
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. New Project → Enable **Gmail API**
 3. Credentials → Create → **OAuth 2.0 Client ID** → Desktop app
-4. Download JSON → rename to `credentials.json`
-5. Place in same folder as the scripts
+4. Download JSON → rename to `credentials.json`, place alongside the scripts
+5. APIs & Services → OAuth consent screen → Test users → add your Gmail address
 
-**3. (Optional) Override paths via environment variables**
+### 3. (Optional) Override paths via environment variables
 
-Copy `.env.example` and set the paths if your files are not in the script directory:
 ```bash
 cp .env.example .env
-# Edit .env, then:
 export GMAIL_CREDENTIALS_PATH=/path/to/credentials.json
 export GMAIL_TOKEN_PATH=/path/to/token.pickle
 ```
 
-**4. Add yourself as a test user**
-- APIs & Services → OAuth consent screen → Test users → Add your Gmail
-
 ---
 
-### Running the Scripts
+## Usage
 
-**Preview what would be labeled (no changes made):**
+### Preview without making changes
+
 ```bash
-python3 gmail_labeler.py --dry-run
+python gmail_labeler.py --dry-run
+python label_interviews.py --dry-run
+python scripts/run_all.py --dry-run
 ```
 
-**Label rejections + applications (main script):**
+### Run individual labelers
+
 ```bash
-python3 gmail_labeler.py
+python gmail_labeler.py          # labels rejections + applications
+python label_interviews.py       # labels interview invitations
+python delete_job_emails.py      # moves labeled emails to Trash
 ```
 
-**Label interview emails:**
+### Run all labelers in one pass
+
 ```bash
-python3 label_interviews.py
+python scripts/run_all.py
+# or
+make run-all
+make run-all-dry
 ```
 
-**Permanently delete labeled emails (⚠️ irreversible):**
+### Keep your Mac awake during a long run
+
 ```bash
-python3 delete_job_emails.py
-```
-
-**Keep Mac awake while running:**
-```bash
-caffeinate -i python3 gmail_labeler.py
-```
-
----
-
-## 📝 Google Apps Script (Alternative)
-
-> ⚠️ Apps Script has a **6-minute execution limit** and a **daily quota**. The scripts auto-resume every minute to work around the time limit, but may hit quota on large inboxes. Use the Python scripts for best results.
-
-**Setup:**
-1. Go to [script.google.com](https://script.google.com)
-2. New Project → paste the `.gs` file contents
-3. Click **Run** → approve permissions
-4. Scripts auto-resume until all emails are processed
-
----
-
-## 🔑 Rejection Keywords Detected
-
-Scripts scan for these phrases found across real rejection emails:
-
-```
-"not be moving forward" | "regret to inform" | "narrowed the search"
-"pursue other applicants" | "move forward with other candidates"
-"not advance your candidacy" | "move forward with another candidate"
-"not proceeding with your candidacy" | "the role has been filled"
-"other candidates whose qualifications" | "more closely match"
-"not selected for" | "unfortunately will not" | "decided not to move forward"
-"chosen to move forward with" | "no longer being considered"
+caffeinate -i python gmail_labeler.py
 ```
 
 ---
 
-## 📊 Interview Keywords Detected
+## CLI Reference
+
+### `gmail_labeler.py`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dry-run` | off | Preview counts without modifying any emails |
+| `--log-level` | `INFO` | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+
+### `label_interviews.py`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dry-run` | off | Preview counts without modifying any emails |
+| `--log-level` | `INFO` | Logging verbosity |
+
+### `delete_job_emails.py`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--yes` | off | Skip interactive confirmation (for CI / scripts) |
+| `--log-level` | `INFO` | Logging verbosity |
+
+### `scripts/run_all.py`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dry-run` | off | Pass dry-run to all labelers |
+| `--log-level` | `INFO` | Logging verbosity |
+
+---
+
+## Labels Created
+
+| Label | What it catches |
+|-------|----------------|
+| **Job Rejections** | "not be moving forward", "regret to inform", "the role has been filled", and 31 more phrases |
+| **Job Applications Applied** | "thank you for applying", "application received", "we will review your application", and 22 more phrases |
+| **Job Interviews** | "invitation to interview", "phone screen", "technical interview", and 16 more phrases |
+
+---
+
+## Architecture
 
 ```
-"invitation to interview" | "interview invitation" | "schedule your interview"
-"first step in our interview process" | "answer a few follow-up questions"
-"pre-interview form" | "instant interview" | "webex link for your upcoming interview"
-"advance to the next stage" | "next round of interviews"
+Gmail API
+    │
+    ├── auth.py              OAuth2 flow + token caching + with_retry()
+    │
+    ├── gmail_labeler.py     Rejections + Applications (--dry-run support)
+    ├── label_interviews.py  Interview invitations   (--dry-run support)
+    ├── delete_job_emails.py Trash labeled emails    (--yes for CI)
+    │
+    └── scripts/run_all.py   Orchestrates all three with one auth call
 ```
 
 ---
 
-## ⚠️ Notes
+## Testing
 
-- Scripts require Gmail API OAuth2 credentials (free)
-- `token.pickle` is saved after first login — delete it to re-authenticate
-- Permanently deleted emails cannot be recovered
-- Daily Gmail API quota resets at midnight Pacific Time
+The test suite mocks all Gmail API calls — no credentials required.
 
----
-
-## 🧪 Testing
-
-The project includes a pytest suite that mocks all Gmail API calls — no credentials required to run tests.
-
-**Install dependencies and run:**
 ```bash
-pip install -r requirements.txt
-python -m pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
-# or via Makefile:
-make test
+make test         # pytest with coverage
+make test-fast    # stop on first failure
+make type-check   # mypy static analysis
 ```
 
-**Test coverage (27 tests total):**
-- `tests/test_auth.py` — `with_retry()` backoff, network error retry, `get_gmail_service` credential handling (11 tests)
-- `tests/test_labeler.py` — label lookup/creation, thread pagination, `--dry-run` mode (7 tests)
-- `tests/test_delete.py` — label ID lookup and batch trash operations (5 tests)
-- `tests/test_label_interviews.py` — interview label creation and thread labeling (4 tests)
+**Test coverage (84+ tests):**
 
-**Dev shortcuts (Makefile):**
+| Test file | Coverage |
+|-----------|----------|
+| `tests/test_auth.py` | `with_retry()` backoff, all retryable/non-retryable codes, token refresh |
+| `tests/test_labeler.py` | label CRUD, pagination, dry-run, large batches, parametrized |
+| `tests/test_delete.py` | label lookup, trash + pagination, main() flows |
+| `tests/test_label_interviews.py` | dry-run parity, pagination, parametrized |
+| `tests/test_main_flows.py` | end-to-end main() smoke tests |
+| `tests/test_run_all.py` | orchestration, label completeness |
+| `tests/test_utils.py` | format_count(), plural_s() |
+
+**Makefile shortcuts:**
+
 ```bash
-make install   # pip install -r requirements.txt
-make test      # pytest with coverage
-make lint      # ruff check
-make fix       # ruff --fix
-make clean     # remove __pycache__, .coverage, etc.
+make install       # pip install -r requirements.txt
+make test          # pytest with coverage report
+make lint          # ruff check
+make fix           # ruff --fix
+make run-all       # python scripts/run_all.py
+make run-all-dry   # python scripts/run_all.py --dry-run
+make clean         # remove __pycache__, .coverage, htmlcov/
 ```
 
 ---
 
-## 📜 License
+## Notes
+
+- `token.pickle` is saved after first login — delete it to force re-authentication
+- Gmail API daily quota resets at midnight Pacific Time
+- Emails in Trash are recoverable for 30 days via Gmail → Trash
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Please open an issue before large changes.
+
+---
+
+## License
 
 MIT — free to use and modify.
