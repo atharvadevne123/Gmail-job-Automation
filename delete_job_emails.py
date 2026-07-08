@@ -11,6 +11,7 @@ import time
 from typing import Any, Optional
 
 from auth import get_gmail_service, with_retry
+from utils import format_count
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ def main() -> None:
         grand_total += count
 
     logger.info("=" * 60)
-    logger.info("  🎉 ALL DONE! %d emails moved to Trash.", grand_total)
+    logger.info("  🎉 ALL DONE! %s moved to Trash.", format_count(grand_total))
     logger.info("  To permanently delete: Gmail → Trash → Empty Trash")
     logger.info("=" * 60)
 
