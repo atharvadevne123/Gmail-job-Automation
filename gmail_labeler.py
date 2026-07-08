@@ -9,7 +9,7 @@ mode to preview counts without making changes.
 import argparse
 import logging
 import time
-from typing import Any, Optional
+from typing import Any, Final, Optional
 
 from auth import get_gmail_service, with_retry
 from utils import format_count
@@ -86,7 +86,7 @@ LABELS: dict[str, list[str]] = {
     ]
 }
 
-BATCH_SIZE = 100  # Google Batch API limit per HTTP request
+BATCH_SIZE: Final[int] = 100  # Google Batch API limit per HTTP request
 
 
 def get_or_create_label(

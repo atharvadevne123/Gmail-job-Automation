@@ -8,14 +8,14 @@ Supports --dry-run mode to preview counts without making any changes.
 import argparse
 import logging
 import time
-from typing import Any, Optional
+from typing import Any, Final, Optional
 
 from auth import get_gmail_service, with_retry
 from utils import format_count
 
 logger = logging.getLogger(__name__)
 
-LABEL_NAME = "Job Interviews"
+LABEL_NAME: Final[str] = "Job Interviews"
 
 INTERVIEW_QUERIES: list[str] = [
     '"invitation to interview"',
@@ -39,7 +39,7 @@ INTERVIEW_QUERIES: list[str] = [
     'subject:"interview"',
 ]
 
-BATCH_SIZE = 100  # Google Batch API limit per HTTP request
+BATCH_SIZE: Final[int] = 100  # Google Batch API limit per HTTP request
 
 
 def get_or_create_label(service: Any, name: str, dry_run: bool = False) -> str:

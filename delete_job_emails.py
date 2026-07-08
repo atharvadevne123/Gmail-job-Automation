@@ -8,7 +8,7 @@ recoverable from Trash for 30 days.
 import argparse
 import logging
 import time
-from typing import Any, Optional
+from typing import Any, Final, Optional
 
 from auth import get_gmail_service, with_retry
 from utils import format_count
@@ -20,7 +20,7 @@ LABELS_TO_TRASH: list[str] = [
     "Job Applications Applied",
 ]
 
-BATCH_SIZE = 100  # Google Batch API limit per HTTP request
+BATCH_SIZE: Final[int] = 100  # Google Batch API limit per HTTP request
 
 
 def get_label_id(service: Any, name: str) -> Optional[str]:
