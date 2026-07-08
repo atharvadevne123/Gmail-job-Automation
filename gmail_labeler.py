@@ -12,6 +12,7 @@ import time
 from typing import Any, Optional
 
 from auth import get_gmail_service, with_retry
+from utils import format_count
 
 __all__ = ["get_or_create_label", "label_threads", "LABELS", "BATCH_SIZE"]
 
@@ -261,9 +262,12 @@ def main() -> None:
 
     logger.info("=" * 60)
     if dry_run:
-        logger.info("  [dry-run] Would label %d emails total. Run without --dry-run to apply.", grand_total)
+        logger.info(
+            "  [dry-run] Would label %s total. Run without --dry-run to apply.",
+            format_count(grand_total),
+        )
     else:
-        logger.info("  🎉 ALL DONE! Grand total: %d emails labeled.", grand_total)
+        logger.info("  🎉 ALL DONE! Grand total: %s labeled.", format_count(grand_total))
     logger.info("=" * 60)
 
 
