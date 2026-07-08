@@ -11,6 +11,7 @@ import time
 from typing import Any, Optional
 
 from auth import get_gmail_service, with_retry
+from utils import format_count
 
 logger = logging.getLogger(__name__)
 
@@ -191,9 +192,15 @@ def main() -> None:
     count = label_interview_threads(service, label_id, dry_run=dry_run)
 
     if dry_run:
-        logger.info("[dry-run] Would label %d interview emails total. Run without --dry-run to apply.", count)
+        logger.info(
+            "[dry-run] Would label %s total. Run without --dry-run to apply.",
+            format_count(count, "interview email", "interview emails"),
+        )
     else:
-        logger.info("ALL DONE! %d interview emails labeled.", count)
+        logger.info(
+            "ALL DONE! %s labeled.",
+            format_count(count, "interview email", "interview emails"),
+        )
 
 
 if __name__ == '__main__':
